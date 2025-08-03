@@ -1,0 +1,4 @@
+[submodule "Extern/SDL3"]
+	path = Extern/SDL3
+	url = https://github.com/libsdl-org/SDL.git
+	branch = release-3.2.18
