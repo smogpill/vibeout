@@ -28,6 +28,8 @@ public:
 	Renderer(SDL_Window& window, bool& result);
 	~Renderer();
 
+	void Render();
+
 private:
 	static constexpr uint s_maxFramesInFlight = 2;
 
@@ -65,6 +67,11 @@ private:
 
 	void UpdateScreenImagesSize();
 	VkExtent2D GetScreenImageExtent() const;
+	VkExtent2D GetRenderExtent() const;
+	void EvaluateAASettings();
+
+	bool BeginRender();
+	void EndRender();
 
 	VkCommandBuffer BeginCommandBuffer(CommandBufferGroup& group);
 	bool SubmitCommandBuffer(VkCommandBuffer cmd_buf, VkQueue queue, int wait_semaphore_count, VkSemaphore* wait_semaphores,
@@ -83,6 +90,12 @@ private:
 	void EndQueueLabel(VkQueue queue);
 	void InsertQueueLabel(VkQueue queue, const char* label);
 	std::pair<uint32, uint32> GetSize() const;
+
+	// Options
+	//----------------------------
+	bool _antiAliasing = false;
+	bool _wantHDR = false;
+	bool _wantVSYNC = false;
 
 	// Context
 	//----------------------------
@@ -122,10 +135,12 @@ private:
 
 	// Frame
 	//----------------------------
-	uint _currentFrameInFlight = 0;
-	uint _nbAccumulatedFrames = 0;
+	uint32 _currentFrameInFlight = 0;
+	uint32 _nbAccumulatedFrames = 0;
+	uint32 _frameCounter = 0;
 	SemaphoreGroup _semaphoreGroups[s_maxFramesInFlight];
 	VkFence _fencesFrameSync[s_maxFramesInFlight] = {};
+	bool _frameReady = false;
 
 	bool _surfaceIsHDR = false;
 	bool _surfaceIsVSYNC = false;

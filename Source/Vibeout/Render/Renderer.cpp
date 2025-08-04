@@ -114,6 +114,13 @@ bool Renderer::Init()
 	return true;
 }
 
+void Renderer::Render()
+{
+    BeginRender();
+    EvaluateAASettings();
+    EndRender();
+}
+
 bool Renderer::InitInstance()
 {
     VkApplicationInfo appInfo = {};
@@ -593,6 +600,151 @@ void Renderer::UpdateScreenImagesSize()
     _extentTAAImages.height = std::max(_extentScreenImages.height, _extentUnscaled.height);
 }
 
+void Renderer::EvaluateAASettings()
+{
+    _antiAliasing = false;
+    _extentTAAOutput = _extentRender;
+
+    /*
+    if (!_useDenoising)
+        return;
+
+   
+    int flt_taa = _desiredTAA;
+
+    if (flt_taa == AA_MODE_TAA)
+    {
+        _effectiveAAMode = AA_MODE_TAA;
+    }
+    else if (flt_taa == AA_MODE_UPSCALE) // TAAU or TAA+FSR
+    {
+        if (_extent_render.width > _extent_unscaled.width || _extent_render.height > _extent_unscaled.height)
+        {
+            _effectiveAAMode = AA_MODE_TAA;
+        }
+        else
+        {
+            _effectiveAAMode = AA_MODE_UPSCALE;
+            _extent_taa_output = _extent_unscaled;
+        }
+    }
+    */
+}
+
+bool Renderer::BeginRender()
+{
+    VO_TRY(_physicalDevice);
+    VO_TRY(_device);
+    VO_TRY(_surface);
+
+    _currentFrameInFlight = _frameCounter % s_maxFramesInFlight;
+    VkResult fenceResult = vkWaitForFences(_device, 1, &_fencesFrameSync[_currentFrameInFlight], VK_TRUE, ~((uint64_t)0));
+    if (fenceResult == VK_ERROR_DEVICE_LOST)
+    {
+        VO_ERROR("Device lost!");
+        return false;
+    }
+
+    //vkResetFences(device, 1, &_fencesFrameSync[_currentFrameInFlight]);
+
+    if (!_swapchain)
+    {
+        VkSurfaceCapabilitiesKHR surfaceCaps;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &surfaceCaps);
+
+        // Un-minimized again?
+        if (surfaceCaps.currentExtent.width != 0 && surfaceCaps.currentExtent.height != 0)
+        {
+            VO_TRY(Recreate());
+        }
+    }
+
+    _extentRender = GetRenderExtent();
+
+    VkExtent2D extentScreenImages = GetScreenImageExtent();
+
+    if (extentScreenImages.width != _extentScreenImages.width
+        || extentScreenImages.height != _extentScreenImages.height
+        || _wantHDR != _surfaceIsHDR
+        || _wantVSYNC != _surfaceIsVSYNC)
+    {
+        _extentScreenImages = extentScreenImages;
+        VO_TRY(Recreate());
+    }
+
+    bool retry = false;
+    do
+    {
+        if (!_swapchain)
+            return false;
+
+        VkResult swapchainResult = vkAcquireNextImageKHR(_device, _swapchain, ~((uint64_t)0),
+            _semaphoreGroups[_currentFrameInFlight]._imageAvailable, VK_NULL_HANDLE, &_currentSwapChainImageIdx);
+        if (swapchainResult == VK_ERROR_OUT_OF_DATE_KHR || swapchainResult == VK_SUBOPTIMAL_KHR)
+        {
+            VO_CHECK(Recreate());
+            retry = true;
+        }
+        else if (swapchainResult != VK_SUCCESS)
+        {
+            VO_ERROR("Error {} in vkAcquireNextImageKHR\n", (int)swapchainResult);
+        }
+    } while (retry);
+
+    if (_waitForIdleFrames)
+    {
+        vkDeviceWaitIdle(_device);
+        --_waitForIdleFrames;
+    }
+
+    vkResetFences(_device, 1, &_fencesFrameSync[_currentFrameInFlight]);
+
+    ResetCommandBuffers(_graphicsCommandBuffers);
+
+    //VO_TRY(_draw->ClearStretchPics());
+    return true;
+}
+
+void Renderer::EndRender()
+{
+    if (!_swapchain)
+    {
+        //coCHECK(_draw->ClearStretchPics());
+        return;
+    }
+
+    VkCommandBuffer commandBuffer = BeginCommandBuffer(_graphicsCommandBuffers);
+    if (_frameReady)
+    {
+        //coCHECK(_draw->FinalBlit(commandBuffer, ImageID::TAA_OUTPUT, _extentTAAOutput));
+        _frameReady = false;
+    }
+
+    //coCHECK(_draw->SubmitStretchPics(commandBuffer));
+
+    VkSemaphore waitSemaphores = _semaphoreGroups[_currentFrameInFlight]._imageAvailable;
+    VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSemaphore signalSemaphore = _semaphoreGroups[_currentFrameInFlight]._renderFinished;
+
+    assert(_graphicsQueue);
+    VO_CHECK(SubmitCommandBuffer(commandBuffer, _graphicsQueue, 1,
+        &waitSemaphores, &waitStages, 1, &signalSemaphore, _fencesFrameSync[_currentFrameInFlight]));
+
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &signalSemaphore;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &_swapchain;
+    presentInfo.pImageIndices = &_currentSwapChainImageIdx;
+
+    VkResult presentResult = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
+        VO_CHECK(Recreate());
+
+    ++_frameCounter;
+}
+
 void Renderer::SetObjectName(uint64 object, VkObjectType objectType, const char* name)
 {
     if (_vkSetDebugUtilsObjectNameEXT && _device)
@@ -692,6 +844,34 @@ VkExtent2D Renderer::GetScreenImageExtent() const
         result.width = std::max(_extentRender.width, _extentUnscaled.width);
         result.height = std::max(_extentRender.height, _extentUnscaled.height);
     }
+
+    result.width = (result.width + 1) & ~1;
+
+    return result;
+}
+
+VkExtent2D Renderer::GetRenderExtent() const
+{
+    float scale = 1.0f;
+    /*
+    if (_drs_effective_scale)
+    {
+        scale = _drs_effective_scale;
+    }
+    else
+    {
+        scale = scr_viewsize->integer;
+        if (cvar_drs_enable->integer)
+        {
+            // Ensure render extent stays below get_screen_image_extent() result
+            scale = coMin(cvar_drs_maxscale->integer, scale);
+        }
+    }
+    */
+
+    VkExtent2D result;
+    result.width = (uint32_t)(_extentUnscaled.width * scale);
+    result.height = (uint32_t)(_extentUnscaled.height * scale);
 
     result.width = (result.width + 1) & ~1;
 
