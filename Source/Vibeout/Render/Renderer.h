@@ -23,4 +23,5 @@ private:
 	VkPhysicalDevice _physicalDevice = nullptr;
 	VkDevice _device = nullptr;
 	uint32 _graphicsQueueFamilyIndex = uint32(-1);
+	VkQueue _graphicsQueue = nullptr;
 };

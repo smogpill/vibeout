@@ -168,5 +168,7 @@ bool Renderer::InitLogicalDevice()
         return false;
     }
 
+    vkGetDeviceQueue(_device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue);
+
     return true;
 }
