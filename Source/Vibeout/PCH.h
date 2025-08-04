@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include <stdio.h>
-//#define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+#include <vulkan/vulkan.h>
 //#define WIN32_LEAN_AND_MEAN
 //#include <Windows.h>

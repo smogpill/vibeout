@@ -2,3 +2,9 @@
 	path = Extern/SDL3
 	url = https://github.com/libsdl-org/SDL.git
 	branch = release-3.2.18
+[submodule "Extern/glm"]
+	path = Extern/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "Extern/Vulkan-Headers"]
+	path = Extern/Vulkan-Headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
