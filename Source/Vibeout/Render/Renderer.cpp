@@ -26,19 +26,15 @@ Renderer::~Renderer()
 
 bool Renderer::Init()
 {
-    if (!InitInstance())
-        return false;
-    if (!InitSurface())
-        return false;
-    if (!InitPhysicalDevice())
-        return false;
-    if (!InitQueueFamilies())
-        return false;
-    if (!InitLogicalDevice())
-        return false;
-    if (!InitVMA())
-        return false;
-
+    VO_TRY(InitInstance());
+    VO_TRY(InitSurface());
+    VO_TRY(InitPhysicalDevice());
+    VO_TRY(InitQueueFamilies());
+    VO_TRY(InitLogicalDevice());
+    VO_TRY(InitVMA());
+    VO_TRY(InitCommandPools());
+    VO_TRY(InitSemaphores());
+    VO_TRY(InitFences());
 	return true;
 }
 
@@ -52,14 +48,25 @@ bool Renderer::InitInstance()
         appInfo.apiVersion = vulkanAPIversion;
     };
 
+    std::vector<const char*> chosenExtensions;
+
     // Get required Vulkan extensions from SDL
-    uint nbExtensions = 0;
-    const char* const* extensions = SDL_Vulkan_GetInstanceExtensions(&nbExtensions);
-    if (!extensions)
+    uint nbExtensionsForSDL = 0;
+    const char* const* extensions = SDL_Vulkan_GetInstanceExtensions(&nbExtensionsForSDL);
+    if (!nbExtensionsForSDL)
     {
         printf("Failed to get Vulkan extension count: %s\n", SDL_GetError());
         return false;
     }
+   
+    for (uint i = 0; i < nbExtensionsForSDL; ++i)
+    {
+        chosenExtensions.push_back(extensions[i]);
+    }
+
+#ifdef coDEV
+    chosenExtensions.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
 
     // Create Vulkan instance
     VkInstanceCreateInfo createInfo = {};
@@ -67,9 +74,8 @@ bool Renderer::InitInstance()
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
         createInfo.enabledLayerCount = 0;
-        createInfo.enabledExtensionCount = nbExtensions;
-        createInfo.ppEnabledExtensionNames = extensions;
-
+        createInfo.enabledExtensionCount = (uint32)chosenExtensions.size();
+        createInfo.ppEnabledExtensionNames = chosenExtensions.data();
 #ifdef VO_DEBUG
         const char* validationLayers[] =
         {
@@ -85,6 +91,26 @@ bool Renderer::InitInstance()
         printf("Failed to create Vulkan instance\n");
         return false;
     }
+
+#ifdef VO_DEBUG
+    // Debug utils
+    {
+        /*
+        auto vkCreateDebugUtilsMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
+        if (vkCreateDebugUtilsMessenger)
+            vkCreateDebugUtilsMessenger(_instance, &debugInfo, nullptr, &_debugUtilsMessenger);
+        */
+
+        _vkCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT");
+        _vkCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT");
+        _vkCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkCmdInsertDebugUtilsLabelEXT");
+        _vkQueueBeginDebugUtilsLabelEXT = (PFN_vkQueueBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkQueueBeginDebugUtilsLabelEXT");
+        _vkQueueEndDebugUtilsLabelEXT = (PFN_vkQueueEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkQueueEndDebugUtilsLabelEXT");
+        _vkQueueInsertDebugUtilsLabelEXT = (PFN_vkQueueInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(_instance, "vkQueueInsertDebugUtilsLabelEXT");
+        _vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT");
+        _vkSetDebugUtilsObjectTagEXT = (PFN_vkSetDebugUtilsObjectTagEXT)vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectTagEXT");
+    }
+#endif
 
     return true;
 }
@@ -202,11 +228,7 @@ bool Renderer::InitLogicalDevice()
     deviceInfo.enabledExtensionCount = std::size(deviceExtensions);
     deviceInfo.ppEnabledExtensionNames = deviceExtensions;
 
-    if (vkCreateDevice(_physicalDevice, &deviceInfo, nullptr, &_device) != VK_SUCCESS)
-    {
-        std::cerr << "Failed to create logical device!\n";
-        return false;
-    }
+    VO_TRY_VK(vkCreateDevice(_physicalDevice, &deviceInfo, nullptr, &_device));
 
     vkGetDeviceQueue(_device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue);
 
@@ -232,4 +254,119 @@ bool Renderer::InitVMA()
         return false;
     }
     return true;
+}
+
+bool Renderer::InitCommandPools()
+{
+    VkCommandPoolCreateInfo info = {};
+    {
+        info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        info.queueFamilyIndex = _graphicsQueueFamilyIndex;
+    }
+
+    VO_TRY_VK(vkCreateCommandPool(_device, &info, nullptr, &_graphicsCommandBuffers._commandPool));
+    return true;
+}
+
+bool Renderer::InitSemaphores()
+{
+    for (SemaphoreGroup& group : _semaphoreGroups)
+    {
+        VkSemaphoreCreateInfo semaphoreInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        VO_TRY_VK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &group._imageAvailable));
+        VO_TRY_VK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &group._renderFinished));
+        VO_TRY_VK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &group._transferFinished));
+        VO_TRY_VK(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &group._traceFinished));
+        SetObjectName(group._imageAvailable, "ImageAvailable");
+        SetObjectName(group._renderFinished, "RenderFinished");
+        SetObjectName(group._transferFinished, "TransferFinished");
+        SetObjectName(group._traceFinished, "TraceFinished");
+    }
+
+    return true;
+}
+
+bool Renderer::InitFences()
+{
+    VkFenceCreateInfo fence_info =
+    {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT, /* fence's initial state set to be signaled
+                                                    to make program not hang */
+    };
+    for (VkFence& fence : _fencesFrameSync)
+    {
+        VO_TRY_VK(vkCreateFence(_device, &fence_info, nullptr, &fence));
+        SetObjectName(fence, "FrameSync");
+    }
+    return true;
+}
+
+void Renderer::SetObjectName(uint64 object, VkObjectType objectType, const char* name)
+{
+    if (_vkSetDebugUtilsObjectNameEXT && _device)
+    {
+        VkDebugUtilsObjectNameInfoEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        info.objectType = objectType;
+        info.objectHandle = object;
+        info.pObjectName = name;
+        _vkSetDebugUtilsObjectNameEXT(_device, &info);
+    }
+}
+
+void Renderer::BeginCommandsLabel(VkCommandBuffer commands, const char* name)
+{
+    if (_vkCmdBeginDebugUtilsLabelEXT && commands)
+    {
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        label.pLabelName = name;
+        _vkCmdBeginDebugUtilsLabelEXT(commands, &label);
+    }
+}
+
+void Renderer::EndCommandsLabel(VkCommandBuffer commands)
+{
+    if (_vkCmdEndDebugUtilsLabelEXT && commands)
+    {
+        _vkCmdEndDebugUtilsLabelEXT(commands);
+    }
+}
+
+void Renderer::InsertCommandsLabel(VkCommandBuffer commands, const char* name)
+{
+    if (_vkCmdInsertDebugUtilsLabelEXT && commands)
+    {
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        label.pLabelName = name;
+        _vkCmdInsertDebugUtilsLabelEXT(commands, &label);
+    }
+}
+
+void Renderer::BeginQueueLabel(VkQueue queue, const char* name)
+{
+    if (_vkQueueBeginDebugUtilsLabelEXT && queue)
+    {
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        label.pLabelName = name;
+        _vkQueueBeginDebugUtilsLabelEXT(queue, &label);
+    }
+}
+
+void Renderer::EndQueueLabel(VkQueue queue)
+{
+    if (_vkQueueEndDebugUtilsLabelEXT && queue)
+    {
+        _vkQueueEndDebugUtilsLabelEXT(queue);
+    }
+}
+
+void Renderer::InsertQueueLabel(VkQueue queue, const char* name)
+{
+    if (_vkQueueInsertDebugUtilsLabelEXT && queue)
+    {
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        label.pLabelName = name;
+        _vkQueueInsertDebugUtilsLabelEXT(queue, &label);
+    }
 }
