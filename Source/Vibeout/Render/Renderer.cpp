@@ -20,6 +20,20 @@ Renderer::~Renderer()
 
 bool Renderer::Init()
 {
+    if (!InitInstance())
+        return false;
+    if (!InitSurface())
+        return false;
+    if (!InitPhysicalDevice())
+        return false;
+    if (!InitLogicalDevice())
+        return false;
+
+	return true;
+}
+
+bool Renderer::InitInstance()
+{
     VkApplicationInfo appInfo = {};
     {
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -53,11 +67,53 @@ bool Renderer::Init()
         return false;
     }
 
+    return false;
+}
+
+bool Renderer::InitSurface()
+{
     if (!SDL_Vulkan_CreateSurface(&_window, _instance, nullptr, &_surface))
     {
         printf("Failed to create Vulkan surface: %s\n", SDL_GetError());
         return false;
     }
 
-	return true;
+    return true;
+}
+
+bool Renderer::InitPhysicalDevice()
+{
+    uint32 nbDevices = 0;
+    vkEnumeratePhysicalDevices(_instance, &nbDevices, nullptr);
+    std::vector<VkPhysicalDevice> physicalDevices(nbDevices);
+    vkEnumeratePhysicalDevices(_instance, &nbDevices, physicalDevices.data());
+
+    for (const auto& device : physicalDevices)
+    {
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(device, &props);
+
+        uint32 nbQueueFamilies = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &nbQueueFamilies, nullptr);
+
+        if (nbQueueFamilies > 0)
+        {
+            _physicalDevice = device;
+            std::cout << "Selected GPU: " << props.deviceName << "\n";
+            break;
+        }
+    }
+
+    if (!_physicalDevice)
+    {
+        std::cerr << "Failed to find suitable GPU!\n";
+        return false;
+    }
+
+    return true;
+}
+
+bool Renderer::InitLogicalDevice()
+{
+    return true;
 }
