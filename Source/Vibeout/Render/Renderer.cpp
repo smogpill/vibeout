@@ -6,6 +6,81 @@
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_2;
 
+struct PickedSurfaceFormat
+{
+    VkSurfaceFormatKHR _surfaceFormat = {};
+    VkFormat _swapchainViewFormat = VK_FORMAT_UNDEFINED;
+};
+
+static bool PickSurfaceFormatHDR(PickedSurfaceFormat* pickedFormat, const std::vector<VkSurfaceFormatKHR>& availableSurfaceFormats)
+{
+    VkSurfaceFormatKHR acceptableFormats[] =
+    {
+        { VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT }
+    };
+
+    for (const VkSurfaceFormatKHR& acceptable : acceptableFormats)
+    {
+        for (const VkSurfaceFormatKHR& available : availableSurfaceFormats)
+        {
+            if (acceptable.format == available.format 
+                && acceptable.colorSpace == available.colorSpace)
+            {
+                pickedFormat->_surfaceFormat = available;
+                pickedFormat->_swapchainViewFormat = acceptable.format;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static bool PickSurfaceFormatSDR(PickedSurfaceFormat* pickedFormat, const std::vector<VkSurfaceFormatKHR>& availableSurfaceFormats)
+{
+    struct AcceptableFormat
+    {
+        VkFormat _format;
+        VkFormat _swapchainViewFormat;
+    };
+    AcceptableFormat acceptableFormats[] =
+    {
+        {VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB},
+        {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB},
+        {VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB},
+        {VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SRGB},
+    };
+
+    for (const auto& acceptable : acceptableFormats)
+    {
+        for (const VkSurfaceFormatKHR& available : availableSurfaceFormats)
+        {
+            if (acceptable._format == available.format)
+            {
+                pickedFormat->_surfaceFormat = available;
+                pickedFormat->_swapchainViewFormat = acceptable._swapchainViewFormat;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+VkImageMemoryBarrier ImageBarrier()
+{
+    return VkImageMemoryBarrier
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED
+    };
+}
+
+void QueueImageBarrier(const VkCommandBuffer& cmds, const VkImageMemoryBarrier& barrier)
+{
+    vkCmdPipelineBarrier(cmds, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
 Renderer::Renderer(SDL_Window& window, bool& result)
     : _window(window)
 {
@@ -35,6 +110,7 @@ bool Renderer::Init()
     VO_TRY(InitCommandPools());
     VO_TRY(InitSemaphores());
     VO_TRY(InitFences());
+    VO_TRY(InitSwapChain());
 	return true;
 }
 
@@ -303,6 +379,220 @@ bool Renderer::InitFences()
     return true;
 }
 
+bool Renderer::InitSwapChain()
+{
+    _nbAccumulatedFrames = 0;
+
+    VkSurfaceCapabilitiesKHR surfaceCaps;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, &surfaceCaps);
+
+    if (surfaceCaps.currentExtent.width == 0 || surfaceCaps.currentExtent.height == 0)
+        return true;
+
+    std::vector<VkSurfaceFormatKHR> availableSurfaceFormats;
+    {
+        uint32 nbFormats = 0;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &nbFormats, nullptr);
+        availableSurfaceFormats.resize(nbFormats, {});
+        vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &nbFormats, availableSurfaceFormats.data());
+    }
+
+    PickedSurfaceFormat pickedFormat;
+    bool surfaceFormatFound = false;
+    if (_surfaceIsHDR != 0)
+    {
+        surfaceFormatFound = PickSurfaceFormatHDR(&pickedFormat, availableSurfaceFormats);
+        _surfaceIsHDR = surfaceFormatFound;
+    }
+    else
+    {
+        _surfaceIsHDR = false;
+    }
+    if (!surfaceFormatFound)
+    {
+        surfaceFormatFound = PickSurfaceFormatSDR(&pickedFormat, availableSurfaceFormats);
+    }
+    VO_TRY(surfaceFormatFound, "No acceptable Vulkan surface format available!");
+
+    _surfaceFormat = pickedFormat._surfaceFormat;
+
+    std::vector<VkPresentModeKHR> availablePresentModes;
+    {
+        uint32 nbPresentModes = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface, &nbPresentModes, nullptr);
+        availablePresentModes.resize(nbPresentModes, {});
+        vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface, &nbPresentModes, availablePresentModes.data());
+    }
+   
+    bool immediateModeAvailable = false;
+
+    for (VkPresentModeKHR presentMode : availablePresentModes)
+    {
+        if (presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+        {
+            immediateModeAvailable = true;
+            break;
+        }
+    }
+
+    if (_surfaceIsVSYNC)
+    {
+        _presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    }
+    else if (immediateModeAvailable)
+    {
+        _presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    }
+    else
+    {
+        _presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+    }
+
+    if (surfaceCaps.currentExtent.width != ~0u)
+    {
+        _extentUnscaled = surfaceCaps.currentExtent;
+    }
+    else
+    {
+        auto [clientWidth, clientHeight] = GetSize();
+        _extentUnscaled.width = std::min<uint>(surfaceCaps.maxImageExtent.width, clientWidth);
+        _extentUnscaled.height = std::min<uint>(surfaceCaps.maxImageExtent.height, clientHeight);
+
+        _extentUnscaled.width = std::max<uint>(surfaceCaps.minImageExtent.width, _extentUnscaled.width);
+        _extentUnscaled.height = std::max<uint>(surfaceCaps.minImageExtent.height, _extentUnscaled.height);
+    }
+
+    {
+        uint32 nbImages = std::max(surfaceCaps.minImageCount, 2u);
+        if (surfaceCaps.maxImageCount > 0)
+            nbImages = std::min(nbImages, surfaceCaps.maxImageCount);
+
+        VkSwapchainCreateInfoKHR info = {};
+        info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        info.surface = _surface;
+        info.minImageCount = nbImages;
+        info.imageFormat = _surfaceFormat.format;
+        info.imageColorSpace = _surfaceFormat.colorSpace;
+        info.imageExtent = _extentUnscaled;
+        info.imageArrayLayers = 1; // only needs to be changed for stereoscopic rendering
+        info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+            | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+            | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        info.queueFamilyIndexCount = 0;
+        info.pQueueFamilyIndices = nullptr;
+        info.preTransform = surfaceCaps.currentTransform;
+        info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        info.presentMode = _presentMode;
+        info.clipped = VK_FALSE;
+        info.oldSwapchain = VK_NULL_HANDLE;
+
+        VO_TRY_VK(vkCreateSwapchainKHR(_device, &info, nullptr, &_swapchain));
+    }
+   
+    // Swap chain images
+    {
+        uint32 nbSwapChainImages = 0;
+        VO_TRY_VK(vkGetSwapchainImagesKHR(_device, _swapchain, &nbSwapChainImages, nullptr));
+        VO_TRY(nbSwapChainImages);
+        _swapChainImages.resize(nbSwapChainImages, nullptr);
+        VO_TRY_VK(vkGetSwapchainImagesKHR(_device, _swapchain, &nbSwapChainImages, _swapChainImages.data()));
+    }
+   
+    // Swap chain image views
+    {
+        _swapChainImageViews.resize(_swapChainImages.size(), nullptr);
+        for (uint i = 0; i < _swapChainImages.size(); ++i)
+        {
+            VkImageViewCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            info.image = _swapChainImages[i];
+            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            info.format = pickedFormat._swapchainViewFormat;
+#if 1
+            info.components =
+            {
+                VK_COMPONENT_SWIZZLE_R,
+                VK_COMPONENT_SWIZZLE_G,
+                VK_COMPONENT_SWIZZLE_B,
+                VK_COMPONENT_SWIZZLE_A
+            };
+#endif
+            info.subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            };
+
+            VO_TRY_VK(vkCreateImageView(_device, &info, nullptr, &_swapChainImageViews[i]));
+        }
+    }
+
+    {
+        VkCommandBuffer cmds = BeginCommandBuffer(_graphicsCommandBuffers);
+
+        for (VkImage& image : _swapChainImages)
+        {
+            VkImageMemoryBarrier barrier = ImageBarrier();
+            barrier.image = image;
+            barrier.subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            };
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = 0;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            QueueImageBarrier(cmds, barrier);
+        }
+
+        VO_TRY(SubmitCommandBufferSimple(cmds, _graphicsQueue));
+        WaitIdle(_graphicsQueue, _graphicsCommandBuffers);
+    }
+
+    return true;
+}
+
+void Renderer::ShutdownSwapChain()
+{
+    for (VkImageView& imageView : _swapChainImageViews)
+    {
+        vkDestroyImageView(_device, imageView, nullptr);
+    }
+    _swapChainImageViews.clear();
+    _swapChainImages.clear();
+
+    if (_swapchain)
+    {
+        vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+        _swapchain = nullptr;
+    }
+}
+
+bool Renderer::Recreate()
+{
+    vkDeviceWaitIdle(_device);
+    ShutdownSwapChain();
+    UpdateScreenImagesSize();
+    VO_TRY(InitSwapChain());
+    _waitForIdleFrames = s_maxFramesInFlight * 2;
+    return true;
+}
+
+void Renderer::UpdateScreenImagesSize()
+{
+    _extentScreenImages = GetScreenImageExtent();
+    _extentTAAImages.width = std::max(_extentScreenImages.width, _extentUnscaled.width);
+    _extentTAAImages.height = std::max(_extentScreenImages.height, _extentUnscaled.height);
+}
+
 void Renderer::SetObjectName(uint64 object, VkObjectType objectType, const char* name)
 {
     if (_vkSetDebugUtilsObjectNameEXT && _device)
@@ -369,4 +659,115 @@ void Renderer::InsertQueueLabel(VkQueue queue, const char* name)
         label.pLabelName = name;
         _vkQueueInsertDebugUtilsLabelEXT(queue, &label);
     }
+}
+
+std::pair<uint32, uint32> Renderer::GetSize() const
+{
+    int width = 0;
+    int height = 0;
+    if ((SDL_GetWindowFlags(&_window) & SDL_WINDOW_MINIMIZED) == 0)
+    {
+        SDL_GetWindowSize(&_window, &width, &height);
+    }
+    return std::pair<uint32, uint32>(width, height);
+}
+
+VkExtent2D Renderer::GetScreenImageExtent() const
+{
+    VkExtent2D result;
+    /*
+    if (cvar_drs_enable->integer)
+    {
+        int image_scale = max(cvar_drs_minscale->integer, cvar_drs_maxscale->integer);
+
+        // In case FSR enable we'll always upscale to 100% and thus need at least the unscaled extent
+        if (vkpt_fsr_is_enabled())
+            image_scale = max(image_scale, 100);
+
+        result.width = (uint32_t)(qvk.extent_unscaled.width * (float)image_scale / 100.f);
+        result.height = (uint32_t)(qvk.extent_unscaled.height * (float)image_scale / 100.f);
+    }
+    else*/
+    {
+        result.width = std::max(_extentRender.width, _extentUnscaled.width);
+        result.height = std::max(_extentRender.height, _extentUnscaled.height);
+    }
+
+    result.width = (result.width + 1) & ~1;
+
+    return result;
+}
+
+void Renderer::WaitIdle(VkQueue queue, CommandBufferGroup& group)
+{
+    vkQueueWaitIdle(queue);
+    ResetCommandBuffers(group);
+}
+
+void Renderer::ResetCommandBuffers(CommandBufferGroup& group)
+{
+    group._usedThisFrame = 0;
+}
+
+VkCommandBuffer Renderer::BeginCommandBuffer(CommandBufferGroup& group)
+{
+    if (group._usedThisFrame == group._maxNbPerFrame)
+    {
+        const uint32 newMax = std::max(4u, group._maxNbPerFrame * 2u);
+        const uint32 nbNew = newMax - group._maxNbPerFrame;
+
+        VkCommandBufferAllocateInfo allocInfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = group._commandPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = nbNew
+        };
+
+        for (std::vector<VkCommandBuffer>& commandBuffers : group._commandBuffers)
+        {
+            commandBuffers.resize(newMax, nullptr);
+            VO_CHECK_VK(vkAllocateCommandBuffers(_device, &allocInfo, &commandBuffers[group._maxNbPerFrame]));
+        }
+
+        group._maxNbPerFrame = newMax;
+    }
+
+    VkCommandBuffer commandBuffer = group._commandBuffers[_currentFrameInFlight][group._usedThisFrame];
+
+    VkCommandBufferBeginInfo beginInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        .pInheritanceInfo = nullptr,
+    };
+    VO_CHECK_VK(vkResetCommandBuffer(commandBuffer, 0));
+    VO_CHECK_VK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+    ++group._usedThisFrame;
+    return commandBuffer;
+}
+
+bool Renderer::SubmitCommandBuffer(VkCommandBuffer cmds, VkQueue queue, int wait_semaphore_count,
+    VkSemaphore* wait_semaphores, VkPipelineStageFlags* wait_stages, int signal_semaphore_count,
+    VkSemaphore* signal_semaphores, VkFence fence)
+{
+    VO_TRY_VK(vkEndCommandBuffer(cmds));
+
+    VkSubmitInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    info.waitSemaphoreCount = wait_semaphore_count;
+    info.pWaitSemaphores = wait_semaphores;
+    info.pWaitDstStageMask = wait_stages;
+    info.signalSemaphoreCount = signal_semaphore_count;
+    info.pSignalSemaphores = signal_semaphores;
+    info.commandBufferCount = 1;
+    info.pCommandBuffers = &cmds;
+
+    VO_TRY_VK(vkQueueSubmit(queue, 1, &info, fence));
+    return true;
+}
+
+bool Renderer::SubmitCommandBufferSimple(VkCommandBuffer cmds, VkQueue queue)
+{
+    return SubmitCommandBuffer(cmds, queue, 0, nullptr, nullptr, 0, nullptr, nullptr);
 }

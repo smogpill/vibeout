@@ -57,6 +57,21 @@ private:
 	bool InitCommandPools();
 	bool InitSemaphores();
 	bool InitFences();
+	bool InitSwapChain();
+
+	void ShutdownSwapChain();
+
+	bool Recreate();
+
+	void UpdateScreenImagesSize();
+	VkExtent2D GetScreenImageExtent() const;
+
+	VkCommandBuffer BeginCommandBuffer(CommandBufferGroup& group);
+	bool SubmitCommandBuffer(VkCommandBuffer cmd_buf, VkQueue queue, int wait_semaphore_count, VkSemaphore* wait_semaphores,
+		VkPipelineStageFlags* wait_stages, int signal_semaphore_count, VkSemaphore* signal_semaphores, VkFence fence);
+	bool SubmitCommandBufferSimple(VkCommandBuffer cmd_buf, VkQueue queue);
+	void WaitIdle(VkQueue queue, CommandBufferGroup& group);
+	void ResetCommandBuffers(CommandBufferGroup& group);
 
 	template <class T>
 	void SetObjectName(const T& object, const char* name) { SetObjectName((uint64)object, GetVkObjectType<T>::_value, name); }
@@ -67,6 +82,7 @@ private:
 	void BeginQueueLabel(VkQueue queue, const char* name);
 	void EndQueueLabel(VkQueue queue);
 	void InsertQueueLabel(VkQueue queue, const char* label);
+	std::pair<uint32, uint32> GetSize() const;
 
 	// Context
 	//----------------------------
@@ -91,13 +107,23 @@ private:
 	// Swap chain
 	//----------------------------
 	VkSwapchainKHR _swapchain = nullptr;
-	uint32 _currentSwapChainImageIdx = 0;
+	uint _currentSwapChainImageIdx = 0;
+	uint _waitForIdleFrames = 0;
 	std::vector<VkImage> _swapChainImages;
 	std::vector<VkImageView> _swapChainImageViews;
+	VkSurfaceFormatKHR _surfaceFormat = {};
+	VkPresentModeKHR _presentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+	VkExtent2D _extentScreenImages = {};
+	VkExtent2D _extentRender = {};
+	VkExtent2D _extentRenderPrev = {};
+	VkExtent2D _extentUnscaled = {};
+	VkExtent2D _extentTAAImages = {};
+	VkExtent2D _extentTAAOutput = {};
 
 	// Frame
 	//----------------------------
-	uint32 _currentFrameInFlight = 0;
+	uint _currentFrameInFlight = 0;
+	uint _nbAccumulatedFrames = 0;
 	SemaphoreGroup _semaphoreGroups[s_maxFramesInFlight];
 	VkFence _fencesFrameSync[s_maxFramesInFlight] = {};
 
