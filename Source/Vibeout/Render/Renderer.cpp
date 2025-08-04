@@ -4,6 +4,8 @@
 #include "PCH.h"
 #include "Renderer.h"
 
+const uint32 vulkanAPIversion = VK_API_VERSION_1_2;
+
 Renderer::Renderer(SDL_Window& window, bool& result)
     : _window(window)
 {
@@ -12,6 +14,10 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 
 Renderer::~Renderer()
 {
+    if (_vmaAllocator)
+        vmaDestroyAllocator(_vmaAllocator);
+    if (_device)
+        vkDestroyDevice(_device, nullptr);
     if (_surface)
         vkDestroySurfaceKHR(_instance, _surface, nullptr);
     if (_instance)
@@ -30,6 +36,8 @@ bool Renderer::Init()
         return false;
     if (!InitLogicalDevice())
         return false;
+    if (!InitVMA())
+        return false;
 
 	return true;
 }
@@ -41,7 +49,7 @@ bool Renderer::InitInstance()
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "Vibeout";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_3;
+        appInfo.apiVersion = vulkanAPIversion;
     };
 
     // Get required Vulkan extensions from SDL
@@ -61,6 +69,15 @@ bool Renderer::InitInstance()
         createInfo.enabledLayerCount = 0;
         createInfo.enabledExtensionCount = nbExtensions;
         createInfo.ppEnabledExtensionNames = extensions;
+
+#ifdef VO_DEBUG
+        const char* validationLayers[] =
+        {
+            "VK_LAYER_KHRONOS_validation"
+        };
+        createInfo.ppEnabledLayerNames = validationLayers;
+        createInfo.enabledLayerCount = std::size(validationLayers);
+#endif
     };
 
     if (vkCreateInstance(&createInfo, nullptr, &_instance) != VK_SUCCESS)
@@ -89,6 +106,19 @@ bool Renderer::InitPhysicalDevice()
     vkEnumeratePhysicalDevices(_instance, &nbDevices, nullptr);
     std::vector<VkPhysicalDevice> physicalDevices(nbDevices);
     vkEnumeratePhysicalDevices(_instance, &nbDevices, physicalDevices.data());
+
+    // Discrete GPU first
+    auto compare = [&](const VkPhysicalDevice& a, const VkPhysicalDevice& b)
+        {
+            VkPhysicalDeviceProperties propsA;
+            VkPhysicalDeviceProperties propsB;
+            vkGetPhysicalDeviceProperties(a, &propsA);
+            vkGetPhysicalDeviceProperties(b, &propsB);
+            if (propsA.deviceType != propsB.deviceType)
+                return propsA.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+            return true;
+        };
+    std::sort(physicalDevices.begin(), physicalDevices.end(), compare);
 
     for (const auto& device : physicalDevices)
     {
@@ -155,8 +185,18 @@ bool Renderer::InitLogicalDevice()
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
+    VkPhysicalDeviceFeatures2 features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+    features.features.samplerAnisotropy = VK_TRUE;
+
+    VkPhysicalDeviceVulkan12Features features12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    features12.runtimeDescriptorArray = VK_TRUE;
+    features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+    features12.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+    features12.pNext = &features;
+
     VkDeviceCreateInfo deviceInfo{};
     deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceInfo.pNext = &features12;
     deviceInfo.queueCreateInfoCount = 1;
     deviceInfo.pQueueCreateInfos = &queueInfo;
     deviceInfo.enabledExtensionCount = std::size(deviceExtensions);
@@ -170,5 +210,26 @@ bool Renderer::InitLogicalDevice()
 
     vkGetDeviceQueue(_device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue);
 
+    return true;
+}
+
+bool Renderer::InitVMA()
+{
+    assert(_physicalDevice);
+    assert(_device);
+    assert(_instance);
+    VmaAllocatorCreateInfo allocatorCreateInfo = {};
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+    allocatorCreateInfo.vulkanApiVersion = vulkanAPIversion;
+    allocatorCreateInfo.physicalDevice = _physicalDevice;
+    allocatorCreateInfo.device = _device;
+    allocatorCreateInfo.instance = _instance;
+
+    assert(_vmaAllocator == nullptr);
+    if (vmaCreateAllocator(&allocatorCreateInfo, &_vmaAllocator) != VK_SUCCESS)
+    {
+        std::cerr << "Failed to create the VMA allocator!\n";
+        return false;
+    }
     return true;
 }

@@ -2,3 +2,5 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"

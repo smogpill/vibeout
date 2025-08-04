@@ -16,6 +16,7 @@ private:
 	bool InitPhysicalDevice();
 	bool InitQueueFamilies();
 	bool InitLogicalDevice();
+	bool InitVMA();
 
 	SDL_Window& _window;
 	VkInstance _instance = nullptr;
@@ -24,4 +25,5 @@ private:
 	VkDevice _device = nullptr;
 	uint32 _graphicsQueueFamilyIndex = uint32(-1);
 	VkQueue _graphicsQueue = nullptr;
+	VmaAllocator _vmaAllocator = nullptr;
 };

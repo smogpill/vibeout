@@ -8,3 +8,7 @@ using int64 = int64_t;
 using uint = unsigned int;
 using uint32 = uint32_t;
 using uint64 = uint64_t;
+
+#ifdef _DEBUG
+#define VO_DEBUG
+#endif
