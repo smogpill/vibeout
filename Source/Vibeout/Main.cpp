@@ -27,6 +27,9 @@ int main(int argc, char* argv[])
     if (!result)
     {
         printf("Could not create the renderer");
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
     }
 
     int quit = 0;

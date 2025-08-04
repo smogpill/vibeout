@@ -26,6 +26,8 @@ bool Renderer::Init()
         return false;
     if (!InitPhysicalDevice())
         return false;
+    if (!InitQueueFamilies())
+        return false;
     if (!InitLogicalDevice())
         return false;
 
@@ -67,7 +69,7 @@ bool Renderer::InitInstance()
         return false;
     }
 
-    return false;
+    return true;
 }
 
 bool Renderer::InitSurface()
@@ -113,7 +115,58 @@ bool Renderer::InitPhysicalDevice()
     return true;
 }
 
+bool Renderer::InitQueueFamilies()
+{
+    uint32 nbQueueFamilies = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &nbQueueFamilies, nullptr);
+    std::vector<VkQueueFamilyProperties> queueFamilies(nbQueueFamilies);
+    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &nbQueueFamilies, queueFamilies.data());
+
+    // Find the graphics queue family
+    for (uint32_t i = 0; i < nbQueueFamilies; i++)
+    {
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            _graphicsQueueFamilyIndex = i;
+            break;
+        }
+    }
+
+    if (_graphicsQueueFamilyIndex == uint32(-1))
+    {
+        std::cerr << "Failed to find graphics queue family!\n";
+        return false;
+    }
+    return true;
+}
+
 bool Renderer::InitLogicalDevice()
 {
+    float queuePriority = 1.0f;
+    VkDeviceQueueCreateInfo queueInfo{};
+    queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
+    queueInfo.queueCount = 1;
+    queueInfo.pQueuePriorities = &queuePriority;
+
+    // Enable device extensions (swapchain is essential)
+    const char* deviceExtensions[] =
+    {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
+    VkDeviceCreateInfo deviceInfo{};
+    deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceInfo.queueCreateInfoCount = 1;
+    deviceInfo.pQueueCreateInfos = &queueInfo;
+    deviceInfo.enabledExtensionCount = std::size(deviceExtensions);
+    deviceInfo.ppEnabledExtensionNames = deviceExtensions;
+
+    if (vkCreateDevice(_physicalDevice, &deviceInfo, nullptr, &_device) != VK_SUCCESS)
+    {
+        std::cerr << "Failed to create logical device!\n";
+        return false;
+    }
+
     return true;
 }

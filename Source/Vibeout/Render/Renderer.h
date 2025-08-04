@@ -14,10 +14,13 @@ private:
 	bool InitInstance();
 	bool InitSurface();
 	bool InitPhysicalDevice();
+	bool InitQueueFamilies();
 	bool InitLogicalDevice();
 
 	SDL_Window& _window;
 	VkInstance _instance = nullptr;
 	VkSurfaceKHR _surface = nullptr;
 	VkPhysicalDevice _physicalDevice = nullptr;
+	VkDevice _device = nullptr;
+	uint32 _graphicsQueueFamilyIndex = uint32(-1);
 };
