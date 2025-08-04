@@ -3,8 +3,28 @@
   <ItemGroup>
     <ClCompile Include="..\..\Source\Vibeout\Main.cpp" />
     <ClCompile Include="..\..\Source\Vibeout\PCH.cpp" />
+    <ClCompile Include="..\..\Source\Vibeout\Render\Renderer.cpp">
+      <Filter>Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Core\Core.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Vibeout\PCH.h" />
+    <ClInclude Include="..\..\Source\Vibeout\Render\Renderer.h">
+      <Filter>Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Core\Core.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Renderer">
+      <UniqueIdentifier>{c4827eb4-e893-4e64-bcf3-0467883947e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{a7cdca81-9d9c-4428-a789-c00749215131}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
