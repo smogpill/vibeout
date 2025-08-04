@@ -5,6 +5,3 @@
 [submodule "Extern/glm"]
 	path = Extern/glm
 	url = https://github.com/g-truc/glm.git
-[submodule "Extern/Vulkan-Headers"]
-	path = Extern/Vulkan-Headers
-	url = https://github.com/KhronosGroup/Vulkan-Headers.git
