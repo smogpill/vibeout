@@ -1,15 +1,16 @@
 rootDir = path.getabsolute("..")
 externDir = path.join(rootDir, "Extern")
 sourceDir = path.join(rootDir, "Source")
+buildDir = path.join(rootDir, "Build")
+workspacesDir = path.join(buildDir, "Workspaces")
 
 function SetProjectDefaults(name)
-	local buildDir = "../../Build"
 	project(name)
 	location(path.join(buildDir, "Projects"))
 	architecture "x64"
 	kind "StaticLib"
 	objdir(path.join(buildDir, "Obj"))
-	targetdir(path.join(buildDir, "Bin/$(Configuration)"))
+	targetdir("$(SolutionDir)$(Platform)/$(Configuration)")
 	libdirs { "$(OutDir)" }
 	includedirs("..")
 
@@ -64,13 +65,15 @@ end
 workspace "Vibeout"
 	configurations { "Debug", "Release" }
 	location "Workspaces"
+
+	externalproject "SDL"
+	   	location "../Extern/SDL3/VisualC/SDL"
+	   	uuid "81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68"
+	   	kind "SharedLib"
+	   	language "C++"
+	   	architecture "x64"
+	   	objdir(path.join(buildDir, "Obj"))
+		targetdir(path.join(buildDir, "Bin/$(Configuration)"))
 	
 	include "../Source/Vibeout"
 	include "../Source/Shaders"
-
-	externalproject "SDL"
-   	location "../Extern/SDL3/VisualC/SDL"
-   	uuid "81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68"
-   	kind "SharedLib"
-   	language "C++"
-   	architecture "x64"
