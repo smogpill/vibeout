@@ -1,5 +1,7 @@
-// Copyright(c) 2022 Jounayd Id Salah
-//
+// Vibeout (https://github.com/smogpill/vibeout)
+// SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
+// SPDX-License-Identifier: MIT
+
 // Refs:
 // - https://github.com/gamehacker1999/DX12Engine/blob/master/Shaders/Lighting.hlsli
 // - https://learnopengl.com/PBR/Lighting

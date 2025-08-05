@@ -1,1 +1,3 @@
-// Copyright(c) 2024 Jounayd Id Salah
+// Vibeout (https://github.com/smogpill/vibeout)
+// SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
+// SPDX-License-Identifier: MIT

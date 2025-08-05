@@ -26,14 +26,12 @@ bool Shaders::Init()
 	VO_TRY(InitModule("PrimaryRays.comp"));
 	VO_TRY(InitModule("DirectLighting.comp"));
 	VO_TRY(InitModule("IndirectLighting.comp"));
-	VO_TRY(InitModule("AutoExposure.comp"));
 	VO_TRY(InitModule("BloomDownsample.comp"));
 	VO_TRY(InitModule("BloomUpsampleCombine.comp"));
 	VO_TRY(InitModule("BloomMix.comp"));
 	VO_TRY(InitModule("ToneMappingHistogram.comp"));
 	VO_TRY(InitModule("ToneMappingCurve.comp"));
 	VO_TRY(InitModule("ToneMappingApply.comp"));
-	VO_TRY(InitModule("ToneMapping.comp"));
 	VO_TRY(InitModule("AsvgfGradientImg.comp"));
 	VO_TRY(InitModule("AsvgfGradientAtrous.comp"));
 	VO_TRY(InitModule("AsvgfGradientReproject.comp"));
@@ -43,8 +41,6 @@ bool Shaders::Init()
 	VO_TRY(InitModule("AsvgfTaau.comp"));
 	VO_TRY(InitModule("CheckerboardInterleave.comp"));
 	VO_TRY(InitModule("Compositing.comp"));
-	VO_TRY(InitModule("StretchPic.vert"));
-	VO_TRY(InitModule("StretchPic.frag"));
 	VO_TRY(InitModule("FinalBlit.vert"));
 	VO_TRY(InitModule("FinalBlit.frag"));
 

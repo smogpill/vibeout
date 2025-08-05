@@ -9,11 +9,12 @@
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "GlobalTextures.h"
 
-#define GLOBAL_VOXEL_DESC_SET_IDX 2
-#include "VoxelBuffer.h"
-
-#define GLOBAL_STORAGE_DESC_SET_IDX 3
+#define GLOBAL_STORAGE_DESC_SET_IDX 2
 #include "GlobalStorage.h"
+
+void main() {}
+
+#if 0
 
 #include "Lighting.glsl"
 #include "Geometry.glsl"
@@ -120,3 +121,5 @@ void main()
     outColor.w = 1.0f;
     */
 }
+
+#endif

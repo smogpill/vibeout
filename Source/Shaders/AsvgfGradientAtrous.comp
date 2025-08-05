@@ -39,8 +39,8 @@ layout(push_constant, std140) uniform IterationInfo {
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "GlobalTextures.h"
 
-#include "utils.glsl"
-#include "asvgf.glsl"
+#include "Utils.glsl"
+#include "Asvgf.glsl"
 
 
 // Blur the gradients

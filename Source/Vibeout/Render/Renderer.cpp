@@ -6,7 +6,7 @@
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Shared/Textures.h"
 
-const uint32 vulkanAPIversion = VK_API_VERSION_1_2;
+const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
 struct PickedSurfaceFormat
 {

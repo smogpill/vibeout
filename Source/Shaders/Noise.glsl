@@ -1,4 +1,6 @@
-// Copyright(c) 2022 Jounayd Id Salah
+// Vibeout (https://github.com/smogpill/vibeout)
+// SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
+// SPDX-License-Identifier: MIT
 
 // Better temporal noise accumulation when using the golden ratio
 // Golden ratio = (1.0f + sqrtf(5.0f)) / 2.0f = 1.61803398875f

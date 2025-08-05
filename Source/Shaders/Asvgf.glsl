@@ -138,7 +138,7 @@ SPEC channel:
 */
 
 
-#include "utils.glsl"
+#include "Utils.glsl"
 
 #define STRATUM_OFFSET_SHIFT 3
 #define STRATUM_OFFSET_MASK ((1 << STRATUM_OFFSET_SHIFT) - 1)

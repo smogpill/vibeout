@@ -51,9 +51,9 @@ shared vec4 s_lf_shy[GROUP_SIZE][GROUP_SIZE];
 shared vec2 s_lf_cocg[GROUP_SIZE][GROUP_SIZE];
 shared float s_depth_width[GROUP_SIZE/GRAD_DWN][GROUP_SIZE/GRAD_DWN];
 
-#include "utils.glsl"
-#include "asvgf.glsl"
-#include "brdf.glsl"
+#include "Utils.glsl"
+#include "Asvgf.glsl"
+#include "Brdf.glsl"
 
 // Preload the color data into shared memory
 void preload()

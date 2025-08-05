@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
-#include "utils.glsl"
+#include "Utils.glsl"
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "GlobalUBO.h"
@@ -44,7 +44,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_BUFFER_DESC_SET_IDX 2
 //#include "vertex_buffer.h"
 
-#include "asvgf.glsl"
+#include "Asvgf.glsl"
 
 // optimal group size determined experimentally on a 3090
 #define GROUP_SIZE_GRAD 8

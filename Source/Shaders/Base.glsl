@@ -1,4 +1,6 @@
-// Copyright(c) 2022 Jounayd Id Salah
+// Vibeout (https://github.com/smogpill/vibeout)
+// SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
+// SPDX-License-Identifier: MIT
 
 float saturate(float x)
 {

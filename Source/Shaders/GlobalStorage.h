@@ -1,4 +1,6 @@
-// Copyright(c) 2025 Jounayd Id Salah
+// Vibeout (https://github.com/smogpill/vibeout)
+// SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
+// SPDX-License-Identifier: MIT
 #ifndef GLOBAL_STORAGE_H
 #define GLOBAL_STORAGE_H
 #include "ShaderInterface.h"
