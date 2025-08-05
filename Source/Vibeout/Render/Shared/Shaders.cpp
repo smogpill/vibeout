@@ -5,7 +5,6 @@
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Renderer.h"
 #include "Vibeout/Base/Utils.h"
-#include "Shaders.h"
 
 Shaders::Shaders(Renderer& renderer, bool& result)
 	: _renderer(renderer)
@@ -35,8 +34,6 @@ bool Shaders::Init()
 	VO_TRY(InitModule("ToneMappingCurve.comp"));
 	VO_TRY(InitModule("ToneMappingApply.comp"));
 	VO_TRY(InitModule("ToneMapping.comp"));
-	VO_TRY(InitModule("LuminanceFill.comp"));
-	VO_TRY(InitModule("LuminanceDownsample.comp"));
 	VO_TRY(InitModule("AsvgfGradientImg.comp"));
 	VO_TRY(InitModule("AsvgfGradientAtrous.comp"));
 	VO_TRY(InitModule("AsvgfGradientReproject.comp"));

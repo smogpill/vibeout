@@ -1,8 +1,12 @@
+rootDir = path.getabsolute("..")
+externDir = path.join(rootDir, "Extern")
+sourceDir = path.join(rootDir, "Source")
+
 function SetProjectDefaults(name)
-	local buildDir = "../Build"
+	local buildDir = "../../Build"
 	project(name)
 	location(path.join(buildDir, "Projects"))
-	architecture "x86_64"
+	architecture "x64"
 	kind "StaticLib"
 	objdir(path.join(buildDir, "Obj"))
 	targetdir(path.join(buildDir, "Bin/$(Configuration)"))
@@ -21,9 +25,8 @@ function SetProjectDefaults(name)
 	filter {}	
 end
 
-function coSetCppProjectDefaults(name)
-	coSetProjectDefaults(name)
-
+function SetCppProjectDefaults(name)
+	SetProjectDefaults(name)
 	rtti "Off"
 	language "C++"
 	exceptionhandling "Off"
@@ -31,12 +34,12 @@ function coSetCppProjectDefaults(name)
 	symbols "On"
 	cppdialect "C++20"
 	runtime "Release" -- Even on debug builds, Unreal is setup this way anyway. But can't use the CRT library memory leaks detector
-
-	flags { "FatalWarnings", "MultiProcessorCompile" }
+	fatalwarnings { "All"}
+	flags { "MultiProcessorCompile" }
 	files { "**.cpp", "**.h", "**.hpp", "**.inl", "**.natvis" }
 
 	if os.isfile("PCH.h") then
-		pchheader(name .. "/PCH.h")
+		pchheader("PCH.h")
 		pchsource('PCH.cpp')
 	end
 
@@ -61,3 +64,13 @@ end
 workspace "Vibeout"
 	configurations { "Debug", "Release" }
 	location "Workspaces"
+	
+	include "../Source/Vibeout"
+	include "../Source/Shaders"
+
+	externalproject "SDL"
+   	location "../Extern/SDL3/VisualC/SDL"
+   	uuid "81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68"
+   	kind "SharedLib"
+   	language "C++"
+   	architecture "x64"
