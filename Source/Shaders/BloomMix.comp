@@ -1,0 +1,38 @@
+// Copyright(c) 2022-2024 Jounayd Id Salah
+// Based on Froyok's bloom: https://www.froyok.fr/blog/2021-12-ue4-custom-bloom/
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "GlobalUBO.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "GlobalTextures.h"
+
+layout(set = 2, binding = 0) uniform sampler2D bloomTexture;
+layout(set = 2, binding = 1, rgba16f) uniform image2D targetImage;
+
+vec2 img_to_uv(ivec2 ipos)
+{
+    vec2 uv = (vec2(ipos) + vec2(0.5)) / vec2(_globalUBO._taaImageWidth, _globalUBO._taaImageHeight);
+    uv = clamp(uv, 0, 1);
+    return uv;
+}
+
+void main()
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	ivec2 size = ivec2(_globalUBO._taa_output_width, _globalUBO._taa_output_height);
+	if(any(greaterThanEqual(ipos, size)))
+		return;
+
+    //vec2 uv = (ipos + 0.5f) / vec2(size);
+	vec2 uv = img_to_uv(ipos);
+	vec4 color = imageLoad(targetImage, ipos);
+    //color.xyz += texture(bloomTexture, uv).rgb * _globalUBO._bloom2_intensity;
+	color.xyz = mix(color.xyz, texture(bloomTexture, uv).rgb, _globalUBO._bloom2_intensity);
+	imageStore(targetImage, ipos, color);
+}

@@ -1,0 +1,65 @@
+// Copyright(c) 2022-2024 Jounayd Id Salah
+// Based on Froyok's bloom: https://www.froyok.fr/blog/2021-12-ue4-custom-bloom/
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout (push_constant) uniform push_constant_block 
+{
+    uvec2 _inputSize;
+    uvec2 _outputSize;
+} push;
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "GlobalUBO.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "GlobalTextures.h"
+
+layout(set = 2, binding = 0) uniform sampler2D inputTexture;
+layout(set = 2, binding = 1, rgba16f) uniform writeonly image2D outColor;
+
+const vec2 coords[13] =
+{
+    vec2(-1.0f,  1.0f), vec2(1.0f,  1.0f),
+    vec2(-1.0f, -1.0f), vec2(1.0f, -1.0f),
+
+    vec2(-2.0f, 2.0f), vec2(0.0f, 2.0f), vec2(2.0f, 2.0f),
+    vec2(-2.0f, 0.0f), vec2(0.0f, 0.0f), vec2(2.0f, 0.0f),
+    vec2(-2.0f,-2.0f), vec2(0.0f,-2.0f), vec2(2.0f,-2.0f)
+};
+
+const float weights[13] =
+{
+    // 4 samples
+    // (1 / 4) * 0.5f = 0.125f
+    0.125f, 0.125f,
+    0.125f, 0.125f,
+
+    // 9 samples
+    // (1 / 9) * 0.5f
+    0.0555555f, 0.0555555f, 0.0555555f,
+    0.0555555f, 0.0555555f, 0.0555555f,
+    0.0555555f, 0.0555555f, 0.0555555f
+};
+
+void main()
+{
+    ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if(any(greaterThanEqual(ipos, push._outputSize)))
+		return;
+
+    vec2 uv = (ipos + 0.5f) / vec2(push._outputSize);
+    vec2 pixelSize = (1.0f / vec2(push._inputSize)) * 0.5;
+
+    vec3 color = vec3(0.0f);
+    for (int i = 0; i < 13; ++i)
+    {
+        vec2 itUV = uv + coords[i] * pixelSize;
+        color += weights[i] * texture(inputTexture, itUV).rgb / STORAGE_SCALE_HDR;
+    }
+
+	imageStore(outColor, ipos, vec4(color, 1) * STORAGE_SCALE_HDR);
+}

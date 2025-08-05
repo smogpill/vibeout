@@ -1,0 +1,311 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ==========================================================================
+//
+// This is the third part of the shader code for the tone mapper, which is
+// based on part of Eilertsen, Mantiuk, and Unger's paper *Real-time noise-
+// aware tone mapping*, with some additional modifications that we found useful.
+//
+// This compute shader uses the tone mapping curve in tonemap_buffer.curve
+// and tonemap_buffer.adapted luminance to tone map IMG_TAA_OUTPUT in-place.
+//
+// The tone mapper consists of three compute shaders, a utilities file, and
+// a CPU-side code file. For an overview of the tone mapper, see
+// `tone_mapping_histogram.comp`.
+//   
+// ==========================================================================
+
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout(constant_id = 0) const uint spec_tone_mapping_hdr = 0;
+
+#include "utils.glsl"
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "GlobalUBO.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "GlobalTextures.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 2
+#include "VertexBuffer.h"
+
+#include "tone_mapping_utils.glsl"
+
+// Process the image in 16x16x1 workgroups.
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// Post-tonemapping curve adjustments; see tone_mapping.c for more info.
+layout(push_constant, std430) uniform PushConstants {
+    float knee_w;
+    float knee_a;
+    float knee_b;
+} push;
+
+// When tm_debug is enabled, this displays debugging information for the
+// histogram in one of two modes on the bottom-left side of the screen. This
+// allows you to visualize both the histogram of the HDR image, as well as the
+// computed tone mapping curve.
+vec4 show_bar_chart(ivec2 pos, bool is_curve)
+{
+    const float scale = float(_globalUBO._taa_output_height) / float(_globalUBO._unscaledHeight);
+    const float bin_width = 2 * scale;
+    ivec2 size = ivec2(HISTOGRAM_BINS * bin_width, 100 * scale);
+
+    ivec2 TL, BR;
+    TL.x = int(10 * scale);
+    BR.y = _globalUBO._taa_output_height - int(22 * scale);
+    TL.y = BR.y - size.y - 1;
+    BR.x = TL.x + size.x + 1;
+    
+    if((pos.x == TL.x || pos.x == BR.x) && (pos.y >= TL.y && pos.y <= BR.y))
+        return vec4(0.5);
+
+    if((pos.y == TL.y || pos.y == BR.y) && (pos.x >= TL.x && pos.x <= BR.x))
+        return vec4(0.5);
+
+    if(pos.x < TL.x || pos.y < TL.y || pos.x > BR.x  || pos.y > BR.y)
+        return vec4(0);
+
+    int bin = int((pos.x - TL.x - 1) / bin_width);
+    float pix_value = (BR.y - pos.y + 1) / float(size.y);
+    float bin_value;
+    if(is_curve)
+    {
+        bin_value = tonemap_buffer.curve[bin];
+        const float r = _globalUBO.tm_dyn_range_stops;
+        bin_value = 0.5*bin_value/r + 1.0;
+    }
+    else
+    {
+        bin_value = tonemap_buffer.normalized[bin];
+    }
+
+    if(pix_value <= bin_value)
+        return vec4(1, 1, 1, 1);
+    else
+        return vec4(0, 0, 0, 1);
+
+    return vec4(0);
+}
+
+// Applies blue-noise-based dithering for linear -> sRGB conversion.
+// This prevents onscreen banding artifacts in areas with subtle gradients.
+vec3 srgb_dither(vec3 color, ivec2 ipos)
+{
+    vec3 srgb = linear_to_srgb(color);
+    vec3 diff = srgb_to_linear(srgb + vec3(1.0/256.0)) - color;
+
+    int texnum = _globalUBO._currentFrameIdx & (NUM_BLUE_NOISE_TEX - 1);
+    ivec2 texpos = ipos & ivec2(BLUE_NOISE_RES - 1);
+    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
+
+    color = color + diff * (noise - 0.5) * 2;
+    return max(vec3(0), color);
+}
+
+vec3 LinearToneMapping(vec3 color)
+{
+	float exposure = 1.;
+	color = clamp(exposure * color, 0., 1.);
+	return color;
+}
+
+vec3 SimpleReinhardToneMapping(vec3 color)
+{
+	float exposure = 1.5;
+	color *= exposure/(1. + color / exposure);
+	return color;
+}
+
+vec3 LumaBasedReinhardToneMapping(vec3 color)
+{
+	float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+	float toneMappedLuma = luma / (1. + luma);
+	color *= toneMappedLuma / luma;
+	return color;
+}
+
+vec3 WhitePreservingLumaBasedReinhardToneMapping(vec3 color)
+{
+	float white = 2.;
+	float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+	float toneMappedLuma = luma * (1. + luma / (white*white)) / (1. + luma);
+	color *= toneMappedLuma / luma;
+	return color;
+}
+
+vec3 RomBinDaHouseToneMapping(vec3 color)
+{
+    color = exp( -1.0 / ( 2.72*color + 0.15 ) );
+	return color;
+}
+
+vec3 FilmicToneMapping(vec3 color)
+{
+	color = max(vec3(0.), color - vec3(0.004));
+	color = (color * (6.2 * color + .5)) / (color * (6.2 * color + 1.7) + 0.06);
+	return color;
+}
+
+vec3 Uncharted2ToneMapping(vec3 color)
+{
+	float A = 0.15;
+	float B = 0.50;
+	float C = 0.10;
+	float D = 0.20;
+	float E = 0.02;
+	float F = 0.30;
+	float W = 11.2;
+	float exposure = 2.;
+	color *= exposure;
+	color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
+	color /= white;
+	return color;
+}
+
+void main()
+{
+    ivec2 ipos = ivec2(gl_GlobalInvocationID);
+    const ivec2 outputSize = ivec2(_globalUBO._taa_output_width, _globalUBO._taa_output_height);
+
+    if(any(greaterThanEqual(ipos, outputSize)))
+        return;
+
+    // Get input color and luminance.
+    vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+    input_color /= STORAGE_SCALE_HDR;
+
+    // Bloom
+    //vec2 uv = (vec2(ipos) + vec2(0.5, 0.5)) / vec2(_globalUBO._taaImageWidth, _globalUBO._taaImageHeight);
+    vec2 uv = (vec2(ipos) + vec2(0.5, 0.5)) / vec2(outputSize);
+    vec3 bloom = texture(TEX_BLOOM, uv).rgb / STORAGE_SCALE_HDR;
+    input_color = mix(input_color, bloom, _globalUBO._bloom2_intensity);
+
+    /* Apply a "colorization" effect.
+     * fs_colorize.rgb is the color, fs_colorize.a is the strength
+     * (with 0 being no colorization, and 1 being replacing the color.) */
+    vec3 colorized = _globalUBO.fs_colorize.rgb;
+    float colorize_lum = luminance(_globalUBO.fs_colorize.rgb);
+    if (colorize_lum > 0)
+        colorized *= 1 / colorize_lum;
+    colorized *= luminance(input_color);
+    input_color = mix(input_color, colorized, _globalUBO.fs_colorize.a);
+
+    // Mix in full screen blend color. Scale it up so it's noticeable against bright pixels as well.
+    vec4 blend_color = _globalUBO.fs_blend_color;
+    blend_color.rgb *= tonemap_buffer.adapted_luminance / max(luminance(blend_color.rgb), exp2(min_log_luminance));
+    blend_color.a = min(blend_color.a, _globalUBO.tm_blend_max_alpha);
+
+    // Fade strength of blend effect between center and border
+    vec2 norm_pos = (vec2(ipos) / vec2(outputSize) - vec2(0.5)) * vec2(2.0 / max(_globalUBO.tm_blend_distance_factor, 0.1));
+    float blend_factor = pow(min(length(norm_pos), 1), _globalUBO.tm_blend_scale_fade_exp);
+    float blend_color_scale = mix(_globalUBO.tm_blend_scale_center, _globalUBO.tm_blend_scale_border,
+                                  smoothstep(0, 1, blend_factor));
+
+    input_color = mix(input_color, blend_color.rgb, blend_color.a * clamp(blend_color_scale, 0, 1));
+
+    const float lum = max(luminance(input_color), exp2(min_log_luminance));
+
+    // Apply linear interpolation manually 
+    // We're currently going to do linear interpolation manually.
+    // Must match tone_mapping_histogram.comp.
+    const float biased_log_luminance = log2(lum) * log_luminance_scale + log_luminance_bias;
+    const float histogram_bin = clamp(biased_log_luminance * HISTOGRAM_BINS, 0.0, HISTOGRAM_BINS);
+    const uint left_bin = uint(histogram_bin);
+    const uint right_bin = left_bin + 1;
+    const float right_weight_F = fract(histogram_bin);
+    const float left_weight_F = 1.0 - right_weight_F;
+
+    const float left_tonecurve = tonemap_buffer.curve[left_bin];
+    const float right_tonecurve = tonemap_buffer.curve[right_bin];
+
+    const float out_log_luminance = left_weight_F * left_tonecurve + right_weight_F * right_tonecurve;
+    const float out_luminance = exp2(out_log_luminance + _globalUBO.tm_exposure_bias);
+
+    //vec3 mapped_color = input_color * out_luminance / lum; // More fun without for now
+    vec3 mapped_color = input_color;
+
+    if(spec_tone_mapping_hdr == 0)
+    {
+        // Finally, since our mapped color has luminance in [0,1], but could have
+        // components greater than 1, we apply a customizable knee to bring all values
+        // fully into range.
+        const vec3 step_value = step(_globalUBO.tm_knee_start, mapped_color);
+        mapped_color = mix(mapped_color, (push.knee_w*mapped_color + push.knee_a)/max(vec3(1e-6), mapped_color + push.knee_b), step_value);
+    }
+
+    // Original autoexposure tonemapping application code
+    // Exposure adjustment followed by Reinhard tonemapper
+    const float adapted_luminance = tonemap_buffer.adapted_luminance;
+    const float scaled_luminance = exp2(_globalUBO.tm_exposure_bias - 2) * lum / adapted_luminance;
+
+    if (false)
+    {   
+        mapped_color = FilmicToneMapping(mapped_color);
+    }
+    else
+    {
+        // HDR: Adjust white point upward for large brightness
+        const float white_point = (spec_tone_mapping_hdr != 0) ? max(_globalUBO.tm_white_point, _globalUBO.tm_hdr_peak_nits / 80) : _globalUBO.tm_white_point;
+        // The autoexposure tonemap has its own Reinhard tonemapper that gets applied to luminance only:
+        const float white_point_squared = white_point * white_point;
+        const float mapped_luminance = (scaled_luminance * (1 + scaled_luminance / white_point_squared)) / (1 + scaled_luminance);
+        const vec3 ae_mapped_color = input_color * mapped_luminance / lum;
+
+        // Finally, allow for some amount of blending with the original frame:
+        mapped_color = mix(mapped_color, ae_mapped_color, _globalUBO.tm_reinhard);
+    }
+
+    if(spec_tone_mapping_hdr == 0)
+    {
+        // Clip to [0,1]:
+        mapped_color = clamp(mapped_color, vec3(0), vec3(1));
+
+        // Apply dither:
+        mapped_color = srgb_dither(mapped_color, ipos);
+    }
+    else
+    {
+        // HDR: map colors such that values at EV 0 map to a display brightness of 'tm_hdr_peak_nits'
+        const float nits_factor = _globalUBO.tm_hdr_peak_nits / 80; // an scRGB luminance of 1.0 is defined as 80 nits
+        const float nits_factor_ui = _globalUBO.ui_hdr_nits / 80;
+        float color_scale = mix(nits_factor, min(nits_factor, nits_factor_ui), _globalUBO.tonemap_hdr_clamp_strength); // clamps color in menu mode, ensures it's legible
+        mapped_color *= color_scale;
+
+        mapped_color.rgb = apply_saturation_scale(mapped_color.rgb, _globalUBO.tm_hdr_saturation_scale * 0.01);
+    }
+
+    // Show tonemapping curve if enabled:
+    if(_globalUBO.tm_debug != 0)
+    {
+        vec4 bar_chart_overlay = show_bar_chart(ipos, _globalUBO.tm_debug == 2);
+        if(spec_tone_mapping_hdr != 0)
+        {
+            bar_chart_overlay *= vec4(vec3(_globalUBO.ui_hdr_nits / 80), 1);
+        }
+        mapped_color = mix(mapped_color.rgb, bar_chart_overlay.rgb, bar_chart_overlay.a);
+    }
+
+    // Write out to image:
+    imageStore(IMG_TAA_OUTPUT, ipos, vec4(mapped_color, 0));
+}

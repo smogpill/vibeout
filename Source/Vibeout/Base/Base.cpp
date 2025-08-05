@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
-#include "Core/Core.h"
-#include "Core.h"
+#include "Vibeout/Base/Base.h"
 
 std::string GetVulkanError(VkResult result)
 {

@@ -1,0 +1,40 @@
+// Copyright(c) 2022 Jounayd Id Salah
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "Base.glsl"
+#include "Color.glsl"
+
+void main() {}
+
+#if 0
+
+layout(location = 0) uniform uvec2 outputSize;
+layout(location = 1) uniform float unExposureCompensation = 0.0f;
+layout(binding = 0) uniform sampler2D unSceneHDR;
+layout(binding = 1) uniform sampler2D unGlobalLuminance;
+layout(binding = 0, rgba16f) uniform writeonly image2D outColor;
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+void main()
+{
+    ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if(any(greaterThanEqual(ipos, outputSize)))
+		return;
+
+	vec2 uv = (ipos + 0.5f) / vec2(outputSize);
+
+	// To get a more natural exposure with less extremes
+	// [Dynamic local exposure](https://john-chapman.github.io/2017/08/23/dynamic-local-exposure.html)
+	float L = exp(texture(unGlobalLuminance, uv).x); // average in x
+	float ev100 = log2(L * 100.0 / 12.5);
+	ev100 = clamp(ev100, -10, 20);
+	ev100 -= unExposureCompensation; // optional manual bias 
+	//float exposure = 1.0 / (1.2 * exp2(ev100));
+	float exposure = 2.0f;
+	vec3 color = texture(unSceneHDR, uv).rgb * exposure;
+	//color = GetHeatColor(log2(Luminance(color) * 100.0 / 12.5));
+	imageStore(outColor, ipos, vec4(color, 1));
+}
+
+#endif

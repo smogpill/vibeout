@@ -4,26 +4,83 @@
     <ClCompile Include="..\..\Source\Vibeout\Main.cpp" />
     <ClCompile Include="..\..\Source\Vibeout\PCH.cpp" />
     <ClCompile Include="..\..\Source\Vibeout\Render\Renderer.cpp">
-      <Filter>Renderer</Filter>
+      <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\Vibeout\Core\Core.cpp">
-      <Filter>Core</Filter>
+    <ClCompile Include="..\..\Source\Vibeout\Render\Shared\Buffers.cpp">
+      <Filter>Render\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Render\Shared\Shaders.cpp">
+      <Filter>Render\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Render\Shared\Textures.cpp">
+      <Filter>Render\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Render\Post\Bloom.cpp">
+      <Filter>Render\Post</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Render\Post\Finalize.cpp">
+      <Filter>Render\Post</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Render\Post\ToneMapping.cpp">
+      <Filter>Render\Post</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Render\Draw\PathTracer.cpp">
+      <Filter>Render\Draw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Base\Utils.cpp">
+      <Filter>Base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Vibeout\Base\Base.cpp">
+      <Filter>Base</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\Vibeout\PCH.h" />
     <ClInclude Include="..\..\Source\Vibeout\Render\Renderer.h">
-      <Filter>Renderer</Filter>
+      <Filter>Render</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Vibeout\Core\Core.h">
-      <Filter>Core</Filter>
+    <ClInclude Include="..\..\Source\Vibeout\Render\Shared\Buffers.h">
+      <Filter>Render\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Render\Shared\Shaders.h">
+      <Filter>Render\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Render\Shared\Textures.h">
+      <Filter>Render\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Render\Post\Bloom.h">
+      <Filter>Render\Post</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Render\Post\Finalize.h">
+      <Filter>Render\Post</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Render\Post\ToneMapping.h">
+      <Filter>Render\Post</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Render\Draw\PathTracer.h">
+      <Filter>Render\Draw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Base\Utils.h">
+      <Filter>Base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Vibeout\Base\Base.h">
+      <Filter>Base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Renderer">
+    <Filter Include="Render">
       <UniqueIdentifier>{c4827eb4-e893-4e64-bcf3-0467883947e1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Core">
+    <Filter Include="Render\Draw">
+      <UniqueIdentifier>{85cda6be-37cb-4de1-a5ac-1b40e92d11c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\Shared">
+      <UniqueIdentifier>{d306b185-48cf-4b64-b6dd-6669f2c51f41}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\Post">
+      <UniqueIdentifier>{426bb017-0b7a-4475-827f-7a1d908741dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Base">
       <UniqueIdentifier>{a7cdca81-9d9c-4428-a789-c00749215131}</UniqueIdentifier>
     </Filter>
   </ItemGroup>

@@ -18,13 +18,17 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Source\Shaders\GlobalUBO.h" />
+    <ClInclude Include="..\..\Source\Shaders\ShaderInterface.h" />
+    <ClInclude Include="..\..\Source\Shaders\SharedConstants.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{f6c94fd5-a17a-4b0d-945e-723d01277306}</ProjectGuid>
-    <RootNamespace>vibeout</RootNamespace>
+    <ProjectGuid>{7a1393e2-433a-4266-8b75-eea7d29d56f8}</ProjectGuid>
+    <RootNamespace>Shaders</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>Vibeout</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -71,8 +75,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -105,17 +107,10 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Extern\SDL3\include;$(VULKAN_SDK)/Include;$(SolutionDir)../Source;$(SolutionDir)..\Extern\VulkanMemoryAllocator\include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <UseStandardPreprocessor>true</UseStandardPreprocessor>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>PCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -126,54 +121,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Extern\SDL3\include;$(VULKAN_SDK)/Include;$(SolutionDir)../Source;$(SolutionDir)..\Extern\VulkanMemoryAllocator\include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <UseStandardPreprocessor>true</UseStandardPreprocessor>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>PCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Extern\SDL3\VisualC\SDL\SDL.vcxproj">
-      <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\Source\Vibeout\Base\Base.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Base\Utils.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Main.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\PCH.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\Vibeout\Render\Draw\PathTracer.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Render\Post\Bloom.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Render\Post\Finalize.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Render\Post\ToneMapping.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Render\Renderer.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Render\Shared\Buffers.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Render\Shared\Shaders.cpp" />
-    <ClCompile Include="..\..\Source\Vibeout\Render\Shared\Textures.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\Source\Vibeout\Base\Base.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Base\Utils.h" />
-    <ClInclude Include="..\..\Source\Vibeout\PCH.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Draw\PathTracer.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Post\Bloom.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Post\Finalize.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Post\ToneMapping.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Renderer.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Shared\Buffers.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Shared\Shaders.h" />
-    <ClInclude Include="..\..\Source\Vibeout\Render\Shared\Textures.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

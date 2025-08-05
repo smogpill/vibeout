@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
-#include "Renderer.h"
+#include "Vibeout/Render/Renderer.h"
+#include "Vibeout/Render/Shared/Shaders.h"
+#include "Vibeout/Render/Shared/Textures.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_2;
 
@@ -89,6 +91,9 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 
 Renderer::~Renderer()
 {
+    delete _textures;
+    delete _shaders;
+
     if (_vmaAllocator)
         vmaDestroyAllocator(_vmaAllocator);
     if (_device)
@@ -111,6 +116,12 @@ bool Renderer::Init()
     VO_TRY(InitSemaphores());
     VO_TRY(InitFences());
     VO_TRY(InitSwapChain());
+    UpdateScreenImagesSize();
+    bool result;
+    _shaders = new Shaders(*this, result);
+    VO_TRY(result);
+    _textures = new Textures(*this, result);
+    VO_TRY(result);
 	return true;
 }
 
@@ -416,9 +427,7 @@ bool Renderer::InitSwapChain()
         _surfaceIsHDR = false;
     }
     if (!surfaceFormatFound)
-    {
         surfaceFormatFound = PickSurfaceFormatSDR(&pickedFormat, availableSurfaceFormats);
-    }
     VO_TRY(surfaceFormatFound, "No acceptable Vulkan surface format available!");
 
     _surfaceFormat = pickedFormat._surfaceFormat;

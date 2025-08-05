@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
+class Shaders;
+class Textures;
 
 template<typename T>
 struct GetVkObjectType;
@@ -29,6 +31,11 @@ public:
 	~Renderer();
 
 	void Render();
+
+	VkDevice GetDevice() const { return _device; }
+	template <class T>
+	void SetObjectName(const T& object, const char* name) { SetObjectName((uint64)object, GetVkObjectType<T>::_value, name); }
+	void SetObjectName(uint64 object, VkObjectType objectType, const char* name);
 
 private:
 	static constexpr uint s_maxFramesInFlight = 2;
@@ -80,9 +87,6 @@ private:
 	void WaitIdle(VkQueue queue, CommandBufferGroup& group);
 	void ResetCommandBuffers(CommandBufferGroup& group);
 
-	template <class T>
-	void SetObjectName(const T& object, const char* name) { SetObjectName((uint64)object, GetVkObjectType<T>::_value, name); }
-	void SetObjectName(uint64 object, VkObjectType objectType, const char* name);
 	void BeginCommandsLabel(VkCommandBuffer commands, const char* name);
 	void EndCommandsLabel(VkCommandBuffer commands);
 	void InsertCommandsLabel(VkCommandBuffer commands, const char* name);
@@ -144,4 +148,9 @@ private:
 
 	bool _surfaceIsHDR = false;
 	bool _surfaceIsVSYNC = false;
+
+	// Managers
+	//----------------------------
+	Shaders* _shaders = nullptr;
+	Textures* _textures = nullptr;
 };
