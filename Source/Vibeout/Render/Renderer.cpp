@@ -127,9 +127,11 @@ bool Renderer::Init()
 
 void Renderer::Render()
 {
-    BeginRender();
-    EvaluateAASettings();
-    EndRender();
+    if (BeginRender())
+    {
+        EvaluateAASettings();
+        EndRender();
+    }
 }
 
 bool Renderer::InitInstance()
@@ -261,6 +263,8 @@ bool Renderer::InitPhysicalDevice()
         std::cerr << "Failed to find suitable GPU!\n";
         return false;
     }
+
+    vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &_memProperties);
 
     return true;
 }
@@ -598,7 +602,7 @@ bool Renderer::Recreate()
     ShutdownSwapChain();
     UpdateScreenImagesSize();
     VO_TRY(InitSwapChain());
-    _waitForIdleFrames = s_maxFramesInFlight * 2;
+    _waitForIdleFrames = maxFramesInFlight * 2;
     return true;
 }
 
@@ -646,7 +650,7 @@ bool Renderer::BeginRender()
     VO_TRY(_device);
     VO_TRY(_surface);
 
-    _currentFrameInFlight = _frameCounter % s_maxFramesInFlight;
+    _currentFrameInFlight = _frameCounter % maxFramesInFlight;
     VkResult fenceResult = vkWaitForFences(_device, 1, &_fencesFrameSync[_currentFrameInFlight], VK_TRUE, ~((uint64_t)0));
     if (fenceResult == VK_ERROR_DEVICE_LOST)
     {
@@ -831,6 +835,50 @@ std::pair<uint32, uint32> Renderer::GetSize() const
         SDL_GetWindowSize(&_window, &width, &height);
     }
     return std::pair<uint32, uint32>(width, height);
+}
+
+bool Renderer::GetMemoryType(uint32 memReqTypeBits, VkMemoryPropertyFlags memProps, uint32& outMemType) const
+{
+    for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++)
+    {
+        if (memReqTypeBits & (1 << i))
+        {
+            if ((_memProperties.memoryTypes[i].propertyFlags & memProps) == memProps)
+            {
+                outMemType = i;
+                return true;
+            }
+        }
+    }
+
+    VO_ERROR("Failed to find memory type with provided flags: {}", memProps);
+    return false;
+}
+
+VkDeviceSize Renderer::GetAvailableVideoMemory() const
+{
+    VkDeviceSize mem = 0;
+    for (uint32_t i = 0; i < _memProperties.memoryHeapCount; ++i)
+    {
+        if ((_memProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0)
+            mem += _memProperties.memoryHeaps[i].size;
+    }
+    return mem;
+}
+
+bool Renderer::AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* memory)
+{
+    uint32 memoryType;
+    VO_TRY(GetMemoryType(memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryType));
+    VkMemoryAllocateInfo info =
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReq.size,
+        .memoryTypeIndex = memoryType
+    };
+
+    VO_TRY_VK(vkAllocateMemory(_device, &info, nullptr, memory));
+    return true;
 }
 
 VkExtent2D Renderer::GetScreenImageExtent() const

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
+#include "Shared/Base.h"
 class Shaders;
 class Textures;
 
@@ -36,9 +37,12 @@ public:
 	template <class T>
 	void SetObjectName(const T& object, const char* name) { SetObjectName((uint64)object, GetVkObjectType<T>::_value, name); }
 	void SetObjectName(uint64 object, VkObjectType objectType, const char* name);
+	bool GetMemoryType(uint32 memReqTypeBits, VkMemoryPropertyFlags memProps, uint32& outMemType) const;
+	VkDeviceSize GetAvailableVideoMemory() const;
+	bool AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* memory);
 
 private:
-	static constexpr uint s_maxFramesInFlight = 2;
+	friend Textures;
 
 	struct SemaphoreGroup
 	{
@@ -52,7 +56,7 @@ private:
 	{
 		uint32 _usedThisFrame = 0;
 		uint32 _maxNbPerFrame = 0;
-		std::vector<VkCommandBuffer> _commandBuffers[s_maxFramesInFlight];
+		std::vector<VkCommandBuffer> _commandBuffers[maxFramesInFlight];
 		VkCommandPool _commandPool = nullptr;
 	};
 
@@ -112,6 +116,7 @@ private:
 	VkQueue _graphicsQueue = nullptr;
 	VmaAllocator _vmaAllocator = nullptr;
 	CommandBufferGroup _graphicsCommandBuffers;
+	VkPhysicalDeviceMemoryProperties _memProperties = {};
 	PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT = nullptr;
 	PFN_vkCmdEndDebugUtilsLabelEXT _vkCmdEndDebugUtilsLabelEXT = nullptr;
 	PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
@@ -142,8 +147,8 @@ private:
 	uint32 _currentFrameInFlight = 0;
 	uint32 _nbAccumulatedFrames = 0;
 	uint32 _frameCounter = 0;
-	SemaphoreGroup _semaphoreGroups[s_maxFramesInFlight];
-	VkFence _fencesFrameSync[s_maxFramesInFlight] = {};
+	SemaphoreGroup _semaphoreGroups[maxFramesInFlight];
+	VkFence _fencesFrameSync[maxFramesInFlight] = {};
 	bool _frameReady = false;
 
 	bool _surfaceIsHDR = false;

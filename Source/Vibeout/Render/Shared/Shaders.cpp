@@ -56,7 +56,7 @@ bool Shaders::InitModule(const std::string& name)
 	VO_TRY(ReadBinaryFile(path.string(), buffer));
 
 	// Vulkan expects the buffer to be uint32_t aligned and sized.
-	const uint32 alignedSize = (buffer.size() + 3) & ~3;
+	const uint32 alignedSize = AlignUp(buffer.size(), 4);
 	buffer.resize(alignedSize, 0u);
 
 	VkShaderModuleCreateInfo info = {};

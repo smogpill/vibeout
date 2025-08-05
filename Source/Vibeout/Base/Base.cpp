@@ -9,6 +9,11 @@ std::string GetVulkanError(VkResult result)
     return std::format("[Vulkan][{}]", string_VkResult(result));
 }
 
+void Info(const std::string& message)
+{
+    std::cout << message;
+}
+
 void Error(const char* file, uint line, const std::string& message)
 {
     const std::string text = std::format("{}({}): {}: {}\n", file, line, "error", message.c_str());

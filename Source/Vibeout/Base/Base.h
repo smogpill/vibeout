@@ -13,19 +13,23 @@ using uint16 = uint16_t;
 using uint32 = uint32_t;
 using uint64 = uint64_t;
 
-#ifdef _DEBUG
-#define VO_DEBUG
-#endif
-
 inline void ReturnVoid(int) {} // to avoid some gcc warnings with the comma operator
 std::string GetVulkanError(VkResult result);
+void Info(const std::string& message);
 void Error(const char* file, uint line, const std::string& message);
+template <class T>
+constexpr T AlignUp(const T val, const T alignment)
+{
+	return (val + (alignment - 1)) & ~(alignment - 1);
+}
 
 #ifdef _MSC_VER
 #define VO_BREAKPOINT() ReturnVoid(IsDebuggerPresent() && (__debugbreak(), 1))
 #else
 #define VO_BREAKPOINT() std::breakpoint_if_debugging()
 #endif
+#define VO_ASSERT(_cond_) assert(_cond_)
+#define VO_INFO(...) Info(std::format(__VA_ARGS__))
 #define VO_ERROR(...) Error(__FILE__, __LINE__, std::format(__VA_ARGS__))
 #define VO_SAFE_SCOPE(_x_) do { _x_ } while (!!false)
 #define VO_TRY(_cond_, ...) VO_SAFE_SCOPE( if(!(_cond_)){ __VA_OPT__(VO_ERROR(__VA_ARGS__)); VO_BREAKPOINT(); return false; } )
