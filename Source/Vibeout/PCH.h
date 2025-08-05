@@ -19,6 +19,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 //#define VMA_VULKAN_VERSION 1003000
 #include <vk_mem_alloc.h>
+#include <stb_image.h>
 #define VC_EXTRALEAN
 #define NOLANGUAGE
 #define NOKEYBOARDINFO

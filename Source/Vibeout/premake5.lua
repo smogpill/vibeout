@@ -17,3 +17,6 @@ links "vulkan-1"
 
 -- VulkanMemoryAllocator (VMA)
 includedirs { path.join(externDir, "VulkanMemoryAllocator/include") }
+
+-- STB
+includedirs { path.join(externDir, "stb") }

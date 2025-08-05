@@ -94,6 +94,11 @@ Renderer::~Renderer()
     delete _textures;
     delete _shaders;
 
+    // TODO missing destroys
+
+    for (VkFence& fence : _fencesFrameSync)
+        vkDestroyFence(_device, fence, nullptr);
+    ShutdownSwapChain();
     if (_vmaAllocator)
         vmaDestroyAllocator(_vmaAllocator);
     if (_device)

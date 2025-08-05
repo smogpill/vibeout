@@ -241,7 +241,7 @@ bool Textures::InitBlueNoise()
 		int w, h, n;
 		char buf[1024];
 
-		snprintf(buf, sizeof buf, "assets/textures/func/blue_noise/%d_%d/HDR_RGBA_%04d.png", res, res, i);
+		snprintf(buf, sizeof buf, "Assets/Textures/Functions/BlueNoise/%d_%d/HDR_RGBA_%04d.png", res, res, i);
 
 		//coByte* filedata = 0;
 		uint16_t* data = 0;

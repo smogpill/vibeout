@@ -49,14 +49,17 @@ bool Shaders::Init()
 
 bool Shaders::InitModule(const std::string& name)
 {
-	std::filesystem::path path = std::format("Shaders/{}.spv", name);
+	wchar_t exePath[MAX_PATH] = { 0 };
+	GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+	const std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
+	std::filesystem::path path = exeDir / "Shaders" / std::format("{}.spv", name);
 	
 	VO_TRY(std::filesystem::exists(path), "Can't read shader file: {}", path.string());
 	std::vector<char> buffer;
 	VO_TRY(ReadBinaryFile(path.string(), buffer));
 
 	// Vulkan expects the buffer to be uint32_t aligned and sized.
-	const uint32 alignedSize = AlignUp(buffer.size(), 4);
+	const uint32 alignedSize = AlignUp<uint32>((uint32)buffer.size(), 4u);
 	buffer.resize(alignedSize, 0u);
 
 	VkShaderModuleCreateInfo info = {};
