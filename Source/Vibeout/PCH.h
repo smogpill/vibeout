@@ -17,7 +17,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
-#define VMA_VULKAN_VERSION 1002000
+//#define VMA_VULKAN_VERSION 1003000
 #include <vk_mem_alloc.h>
 #define VC_EXTRALEAN
 #define NOLANGUAGE
