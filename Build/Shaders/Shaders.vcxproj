@@ -23,6 +23,42 @@
     <ClInclude Include="..\..\Source\Shaders\ShaderInterface.h" />
     <ClInclude Include="..\..\Source\Shaders\SharedConstants.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Source\Shaders\Asvgf.glsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="..\..\Source\Shaders\AsvgfAtrous.comp" />
+    <None Include="..\..\Source\Shaders\AsvgfGradientAtrous.comp" />
+    <None Include="..\..\Source\Shaders\AsvgfGradientImg.comp" />
+    <None Include="..\..\Source\Shaders\AsvgfGradientReproject.comp" />
+    <None Include="..\..\Source\Shaders\AsvgfLf.comp" />
+    <None Include="..\..\Source\Shaders\AsvgfTaau.comp" />
+    <None Include="..\..\Source\Shaders\AsvgfTemporal.comp" />
+    <None Include="..\..\Source\Shaders\AutoExposure.comp" />
+    <None Include="..\..\Source\Shaders\BloomDownsample.comp" />
+    <None Include="..\..\Source\Shaders\BloomMix.comp" />
+    <None Include="..\..\Source\Shaders\BloomUpsampleCombine.comp" />
+    <None Include="..\..\Source\Shaders\CheckerboardInterleave.comp" />
+    <None Include="..\..\Source\Shaders\Compositing.comp" />
+    <None Include="..\..\Source\Shaders\DirectLighting.comp" />
+    <None Include="..\..\Source\Shaders\FinalBlit.frag" />
+    <None Include="..\..\Source\Shaders\FinalBlit.vert" />
+    <None Include="..\..\Source\Shaders\IndirectLighting.comp" />
+    <None Include="..\..\Source\Shaders\LuminanceDownsample.comp" />
+    <None Include="..\..\Source\Shaders\LuminanceFill.comp" />
+    <None Include="..\..\Source\Shaders\PrimaryRays.comp" />
+    <None Include="..\..\Source\Shaders\StretchPic.frag" />
+    <None Include="..\..\Source\Shaders\StretchPic.vert" />
+    <None Include="..\..\Source\Shaders\ToneMapping.comp" />
+    <None Include="..\..\Source\Shaders\ToneMappingApply.comp" />
+    <None Include="..\..\Source\Shaders\ToneMappingCurve.comp" />
+    <None Include="..\..\Source\Shaders\ToneMappingHistogram.comp" />
+    <None Include="..\..\Source\Shaders\ToneMappingUtils.glsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -112,6 +148,18 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <CustomBuildStep>
+      <Command>glslangValidator -V %(Identity) -o %(Identity).spv --target-env spirv1.2</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Compiling shader %(Filename)%(Extension)</Message>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>%(Identity).spv</Outputs>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <TreatOutputAsContent>true</TreatOutputAsContent>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -126,6 +174,18 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <CustomBuildStep>
+      <Command>$(GLSLANG)/glslangValidator -V %(Identity) -o %(Identity).spv --target-env spirv1.2</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Compiling shader %(Filename)%(Extension)</Message>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>%(Identity).spv</Outputs>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <TreatOutputAsContent>true</TreatOutputAsContent>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

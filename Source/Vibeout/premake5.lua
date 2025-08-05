@@ -1,0 +1,2 @@
+coSetCppProjectDefaults("Vibeout")
+kind "WindowedApp"
