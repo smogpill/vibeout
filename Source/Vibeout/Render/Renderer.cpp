@@ -6,9 +6,11 @@
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Shared/Textures.h"
 #include "Vibeout/Render/Shared/Buffers.h"
+#include "Vibeout/Render/Shared/VertexBuffer.h"
 #include "Vibeout/Render/Draw/PathTracer.h"
 #include "Vibeout/Render/Post/Denoiser.h"
 #include "Vibeout/Render/Post/Bloom.h"
+#include "Vibeout/Render/Post/ToneMapping.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -96,9 +98,11 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 Renderer::~Renderer()
 {
     ShutdownPipelines();
+    delete _toneMapping;
     delete _bloom;
     delete _denoiser;
     delete _pathTracer;
+    delete _vertexBuffer;
     delete _buffers;
     delete _textures;
     delete _shaders;
@@ -139,11 +143,15 @@ bool Renderer::Init()
     VO_TRY(result);
     _buffers = new Buffers(*this, result);
     VO_TRY(result);
+    _vertexBuffer = new VertexBuffer(*this, result);
+    VO_TRY(result);
     _pathTracer = new PathTracer(*this, result);
     VO_TRY(result);
     _denoiser = new Denoiser(*this, result);
     VO_TRY(result);
     _bloom = new Bloom(*this, result);
+    VO_TRY(result);
+    _toneMapping = new ToneMapping(*this, result);
     VO_TRY(result);
 
     VO_TRY(_textures->InitImages());
@@ -624,17 +632,21 @@ void Renderer::ShutdownSwapChain()
 
 bool Renderer::InitPipelines()
 {
+    VO_TRY(_vertexBuffer->InitPipelines());
     VO_TRY(_pathTracer->InitPipelines());
     VO_TRY(_denoiser->InitPipelines());
     VO_TRY(_bloom->InitFramebufferRelated());
+    VO_TRY(_toneMapping->InitPipelines());
     return true;
 }
 
 void Renderer::ShutdownPipelines()
 {
+    _toneMapping->ShutdownPipelines();
     _bloom->ShutdownFramebufferRelated();
     _denoiser->ShutdownPipelines();
     _pathTracer->ShutdownPipelines();
+    _vertexBuffer->ShutdownPipelines();
 }
 
 bool Renderer::Recreate()
