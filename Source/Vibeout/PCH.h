@@ -20,6 +20,16 @@
 //#define VMA_VULKAN_VERSION 1003000
 #include <vk_mem_alloc.h>
 #include <stb_image.h>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/common.hpp>
+#include <glm/matrix.hpp> 
+#include <glm/trigonometric.hpp>
+#include <glm/vector_relational.hpp>
+#include <glm/ext/matrix_transform.hpp> 
+#include <glm/ext/matrix_clip_space.hpp> 
 #define VC_EXTRALEAN
 #define NOLANGUAGE
 #define NOKEYBOARDINFO

@@ -8,6 +8,7 @@ class Textures;
 class Buffers;
 class PathTracer;
 class Denoiser;
+class Bloom;
 
 template<typename T>
 struct GetVkObjectType;
@@ -45,10 +46,11 @@ public:
 	bool AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* memory);
 
 private:
-	friend Textures;
-	friend Buffers;
-	friend PathTracer;
-	friend Denoiser;
+	friend class Textures;
+	friend class Buffers;
+	friend class PathTracer;
+	friend class Denoiser;
+	friend class Bloom;
 
 	struct SemaphoreGroup
 	{
@@ -168,4 +170,5 @@ private:
 	Buffers* _buffers = nullptr;
 	PathTracer* _pathTracer = nullptr;
 	Denoiser* _denoiser = nullptr;
+	Bloom* _bloom = nullptr;
 };

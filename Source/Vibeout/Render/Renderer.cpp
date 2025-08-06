@@ -8,6 +8,7 @@
 #include "Vibeout/Render/Shared/Buffers.h"
 #include "Vibeout/Render/Draw/PathTracer.h"
 #include "Vibeout/Render/Post/Denoiser.h"
+#include "Vibeout/Render/Post/Bloom.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -95,6 +96,7 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 Renderer::~Renderer()
 {
     ShutdownPipelines();
+    delete _bloom;
     delete _denoiser;
     delete _pathTracer;
     delete _buffers;
@@ -129,6 +131,7 @@ bool Renderer::Init()
     VO_TRY(InitFences());
     VO_TRY(InitSwapChain());
     UpdateScreenImagesSize();
+
     bool result;
     _shaders = new Shaders(*this, result);
     VO_TRY(result);
@@ -140,6 +143,10 @@ bool Renderer::Init()
     VO_TRY(result);
     _denoiser = new Denoiser(*this, result);
     VO_TRY(result);
+    _bloom = new Bloom(*this, result);
+    VO_TRY(result);
+
+    VO_TRY(_textures->InitImages());
     VO_TRY(InitPipelines());
 	return true;
 }
@@ -618,11 +625,15 @@ void Renderer::ShutdownSwapChain()
 bool Renderer::InitPipelines()
 {
     VO_TRY(_pathTracer->InitPipelines());
+    VO_TRY(_denoiser->InitPipelines());
+    VO_TRY(_bloom->InitFramebufferRelated());
     return true;
 }
 
 void Renderer::ShutdownPipelines()
 {
+    _bloom->ShutdownFramebufferRelated();
+    _denoiser->ShutdownPipelines();
     _pathTracer->ShutdownPipelines();
 }
 
