@@ -5,6 +5,7 @@
 #include "Vibeout/Render/Renderer.h"
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Shared/Textures.h"
+#include "Vibeout/Render/Shared/Buffers.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -91,6 +92,7 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 
 Renderer::~Renderer()
 {
+    delete _buffers;
     delete _textures;
     delete _shaders;
 
@@ -126,6 +128,8 @@ bool Renderer::Init()
     _shaders = new Shaders(*this, result);
     VO_TRY(result);
     _textures = new Textures(*this, result);
+    VO_TRY(result);
+    _buffers = new Buffers(*this, result);
     VO_TRY(result);
 	return true;
 }

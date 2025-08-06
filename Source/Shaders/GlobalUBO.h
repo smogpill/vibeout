@@ -6,6 +6,7 @@
 #include "ShaderInterface.h"
 
 #define GLOBAL_UBO_BINDING_IDX 0
+#define GLOBAL_TLAS_BINDING_IDX 1
 
 #ifdef __cplusplus
 struct alignas(16) GlobalUniformBuffer

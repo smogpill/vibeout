@@ -5,6 +5,7 @@
 #include "Shared/Base.h"
 class Shaders;
 class Textures;
+class Buffers;
 
 template<typename T>
 struct GetVkObjectType;
@@ -43,6 +44,7 @@ public:
 
 private:
 	friend Textures;
+	friend Buffers;
 
 	struct SemaphoreGroup
 	{
@@ -158,4 +160,5 @@ private:
 	//----------------------------
 	Shaders* _shaders = nullptr;
 	Textures* _textures = nullptr;
+	Buffers* _buffers = nullptr;
 };
