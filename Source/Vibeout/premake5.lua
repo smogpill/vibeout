@@ -1,5 +1,6 @@
 SetCppProjectDefaults("Vibeout")
 kind "WindowedApp"
+debugdir(rootDir)
 
 links { "Shaders" }
 dependson { "Shaders" }
