@@ -6,6 +6,7 @@
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Shared/Textures.h"
 #include "Vibeout/Render/Shared/Buffers.h"
+#include "Vibeout/Render/Draw/PathTracer.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -93,6 +94,7 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 Renderer::~Renderer()
 {
     ShutdownPipelines();
+    delete _pathTracer;
     delete _buffers;
     delete _textures;
     delete _shaders;
@@ -131,6 +133,8 @@ bool Renderer::Init()
     _textures = new Textures(*this, result);
     VO_TRY(result);
     _buffers = new Buffers(*this, result);
+    VO_TRY(result);
+    _pathTracer = new PathTracer(*this, result);
     VO_TRY(result);
     VO_TRY(InitPipelines());
 	return true;
@@ -609,11 +613,13 @@ void Renderer::ShutdownSwapChain()
 
 bool Renderer::InitPipelines()
 {
+    VO_TRY(_pathTracer->InitPipelines());
     return true;
 }
 
 void Renderer::ShutdownPipelines()
 {
+    _pathTracer->ShutdownPipelines();
 }
 
 bool Renderer::Recreate()
