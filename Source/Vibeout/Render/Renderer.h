@@ -3,15 +3,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Shared/Base.h"
-class Shaders;
-class Textures;
-class Buffers;
-class VertexBuffer;
-class PathTracer;
-class Denoiser;
-class Bloom;
-class ToneMapping;
-class Draw;
+class Shaders; class Textures; class Buffers; class VertexBuffer; class PathTracer;
+class Denoiser; class Bloom; class ToneMapping; class Draw; class Game;
 
 template<typename T>
 struct GetVkObjectType;
@@ -35,7 +28,7 @@ template<> struct GetVkObjectType<VkSampler> { static inline  VkObjectType _valu
 class Renderer
 {
 public:
-	Renderer(SDL_Window& window, bool& result);
+	Renderer(SDL_Window& window, Game& game, bool& result);
 	~Renderer();
 
 	void Render();
@@ -97,7 +90,10 @@ private:
 	void EvaluateAASettings();
 
 	bool BeginRender();
+	bool RenderContent();
 	void EndRender();
+
+	bool UpdateUBO();
 
 	VkCommandBuffer BeginCommandBuffer(CommandBufferGroup& group);
 	bool SubmitCommandBuffer(VkCommandBuffer cmd_buf, VkQueue queue, int wait_semaphore_count, VkSemaphore* wait_semaphores,
@@ -114,15 +110,23 @@ private:
 	void InsertQueueLabel(VkQueue queue, const char* label);
 	std::pair<uint32, uint32> GetSize() const;
 
+	// Context
+	//----------------------------
+	SDL_Window& _window;
+	Game& _game;
+
 	// Options
 	//----------------------------
 	bool _antiAliasing = false;
 	bool _wantHDR = false;
 	bool _wantVSYNC = false;
+	bool _wantDenoising = false;
+	bool _wantBloom = true;
+	bool _wantToneMapping = true;
+	uint _nbBounceRays = 0;
 
-	// Context
+	// Graphics instance
 	//----------------------------
-	SDL_Window& _window;
 	VkInstance _instance = nullptr;
 	VkSurfaceKHR _surface = nullptr;
 	VkPhysicalDevice _physicalDevice = nullptr;
@@ -140,6 +144,8 @@ private:
 	PFN_vkQueueInsertDebugUtilsLabelEXT _vkQueueInsertDebugUtilsLabelEXT = nullptr;
 	PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
 	PFN_vkSetDebugUtilsObjectTagEXT _vkSetDebugUtilsObjectTagEXT = nullptr;
+	bool _surfaceIsHDR = false;
+	bool _surfaceIsVSYNC = false;
 
 	// Swap chain
 	//----------------------------
@@ -165,9 +171,7 @@ private:
 	SemaphoreGroup _semaphoreGroups[maxFramesInFlight];
 	VkFence _fencesFrameSync[maxFramesInFlight] = {};
 	bool _frameReady = false;
-
-	bool _surfaceIsHDR = false;
-	bool _surfaceIsVSYNC = false;
+	bool _temporalFrameIsValid = true;
 
 	// Managers
 	//----------------------------

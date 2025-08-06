@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include <SDL3/SDL_main.h>
+#include "Game/Game.h"
 #include "Render/Renderer.h"
 
 int main(int argc, char* argv[])
@@ -22,23 +23,30 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    bool result;
-    Renderer renderer(*window, result);
-    if (!result)
     {
-        printf("Could not create the renderer");
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+        Game game;
 
-    int quit = 0;
-    SDL_Event e;
-    while (!quit)
-    {
-        while (SDL_PollEvent(&e))
-            if (e.type == SDL_EVENT_QUIT)
-                quit = 1;
+        bool result;
+        Renderer renderer(*window, game, result);
+        if (!result)
+        {
+            printf("Could not create the renderer");
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            return 1;
+        }
+
+        int quit = 0;
+        SDL_Event e;
+        while (!quit)
+        {
+            while (SDL_PollEvent(&e))
+                if (e.type == SDL_EVENT_QUIT)
+                    quit = 1;
+
+            game.Update();
+            renderer.Render();
+        }
     }
 
     SDL_DestroyWindow(window);

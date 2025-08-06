@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
-#include "Vibeout/Render/Renderer.h"
+#include "Renderer.h"
+#include "Vibeout/Game/Game.h"
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Shared/Textures.h"
 #include "Vibeout/Render/Shared/Buffers.h"
 #include "Vibeout/Render/Shared/VertexBuffer.h"
+#include "Vibeout/Render/Shared/Utils.h"
 #include "Vibeout/Render/Draw/PathTracer.h"
 #include "Vibeout/Render/Post/Denoiser.h"
 #include "Vibeout/Render/Post/Bloom.h"
@@ -90,8 +92,9 @@ void QueueImageBarrier(const VkCommandBuffer& cmds, const VkImageMemoryBarrier& 
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-Renderer::Renderer(SDL_Window& window, bool& result)
+Renderer::Renderer(SDL_Window& window, Game& game, bool& result)
     : _window(window)
+    , _game(game)
 {
 	result = Init();
 }
@@ -168,6 +171,7 @@ void Renderer::Render()
     if (BeginRender())
     {
         EvaluateAASettings();
+        RenderContent();
         EndRender();
     }
 }
@@ -198,8 +202,8 @@ bool Renderer::InitInstance()
         chosenExtensions.push_back(extensions[i]);
     }
 
-#ifdef coDEV
-    chosenExtensions.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#ifdef VO_DEBUG
+    chosenExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
     // Create Vulkan instance
@@ -373,9 +377,9 @@ bool Renderer::InitLogicalDevice()
 
 bool Renderer::InitVMA()
 {
-    assert(_physicalDevice);
-    assert(_device);
-    assert(_instance);
+    VO_ASSERT(_physicalDevice);
+    VO_ASSERT(_device);
+    VO_ASSERT(_instance);
     VmaAllocatorCreateInfo allocatorCreateInfo = {};
     allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     allocatorCreateInfo.vulkanApiVersion = vulkanAPIversion;
@@ -383,7 +387,7 @@ bool Renderer::InitVMA()
     allocatorCreateInfo.device = _device;
     allocatorCreateInfo.instance = _instance;
 
-    assert(_vmaAllocator == nullptr);
+    VO_ASSERT(_vmaAllocator == nullptr);
     if (vmaCreateAllocator(&allocatorCreateInfo, &_vmaAllocator) != VK_SUCCESS)
     {
         std::cerr << "Failed to create the VMA allocator!\n";
@@ -777,7 +781,100 @@ bool Renderer::BeginRender()
 
     ResetCommandBuffers(_graphicsCommandBuffers);
 
-    //VO_TRY(_draw->ClearStretchPics());
+    VO_TRY(_draw->ClearStretchPics());
+    return true;
+}
+
+bool Renderer::RenderContent()
+{
+    VO_TRY(_swapchain);
+
+    VO_ASSERT(!_frameReady);
+    VO_TRY(_buffers);
+    VO_TRY(_pathTracer);
+
+    EvaluateAASettings();
+
+    VO_TRY(_graphicsQueue);
+
+    const uint32 previousFrameInFlight = _currentFrameInFlight ? (_currentFrameInFlight - 1) : (maxFramesInFlight - 1);
+    VkSemaphore transfer_semaphores = _semaphoreGroups[_currentFrameInFlight]._transferFinished;
+    VkSemaphore trace_semaphores = _semaphoreGroups[_currentFrameInFlight]._traceFinished;
+    VkSemaphore prev_trace_semaphores = _semaphoreGroups[previousFrameInFlight]._traceFinished;
+    VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    // Uploads + primary rays
+    {
+        VkCommandBuffer cmds = BeginCommandBuffer(_graphicsCommandBuffers);
+
+        VO_TRY(UpdateUBO());
+
+        {
+            VO_SCOPE_VK_CMD_LABEL(cmds, "Uploads + primary rays");
+
+            _buffers->CopyFromStaging(cmds);
+
+            // Other copy things
+
+            _pathTracer->TracePrimaryRays(cmds);
+        }
+
+        bool& prev_trace_signaled = _semaphoreGroups[previousFrameInFlight]._traceSignaled;
+        VO_TRY(SubmitCommandBuffer(cmds, _graphicsQueue, prev_trace_signaled ? 1 : 0, &prev_trace_semaphores, &wait_stages, 0, nullptr, nullptr));
+        prev_trace_signaled = false;
+    }
+
+    // Trace more
+    {
+        VkCommandBuffer cmds = BeginCommandBuffer(_graphicsCommandBuffers);
+
+        {
+            VO_SCOPE_VK_CMD_LABEL(cmds, "RenderFrame::Trace");
+
+            if (_wantDenoising)
+                VO_CHECK(_denoiser->ASVGF_GradientReproject(cmds));
+
+            _pathTracer->TraceLighting(cmds, _nbBounceRays);
+        }
+
+        VO_CHECK(SubmitCommandBuffer(cmds, _graphicsQueue, 0, nullptr, 0, 1, &trace_semaphores, nullptr));
+
+        VO_ASSERT(!_semaphoreGroups[_currentFrameInFlight]._traceSignaled);
+        _semaphoreGroups[_currentFrameInFlight]._traceSignaled = true;
+    }
+
+    // Post
+    {
+        VkCommandBuffer cmds = BeginCommandBuffer(_graphicsCommandBuffers);
+
+        {
+            VO_SCOPE_VK_CMD_LABEL(cmds, "RenderFrame::Post");
+
+            if (_wantDenoising)
+                VO_CHECK(_denoiser->ASVGF_Filter(cmds, _nbBounceRays > 0));
+            else
+                VO_CHECK(_denoiser->Compositing(cmds));
+
+            VO_CHECK(_denoiser->Interleave(cmds));
+            VO_CHECK(_denoiser->TAA(cmds));
+
+            if (_wantBloom)
+            {
+                //VO_CHECK(_bloom->RecordCommands(cmds));
+                VO_CHECK(_bloom->RecordCommandBuffer(cmds));
+            }
+
+            if (_wantToneMapping)
+            {
+                VO_CHECK(_toneMapping->RecordCommandBuffer(cmds, _game.GetDeltaTime()));
+            }
+        }
+
+        VO_CHECK(SubmitCommandBufferSimple(cmds, _graphicsQueue));
+    }
+
+    _temporalFrameIsValid = _wantDenoising;
+    _frameReady = true;
     return true;
 }
 
@@ -785,24 +882,24 @@ void Renderer::EndRender()
 {
     if (!_swapchain)
     {
-        //coCHECK(_draw->ClearStretchPics());
+        VO_CHECK(_draw->ClearStretchPics());
         return;
     }
 
     VkCommandBuffer commandBuffer = BeginCommandBuffer(_graphicsCommandBuffers);
     if (_frameReady)
     {
-        //coCHECK(_draw->FinalBlit(commandBuffer, ImageID::TAA_OUTPUT, _extentTAAOutput));
+        VO_CHECK(_draw->FinalBlit(commandBuffer, ImageID::TAA_OUTPUT, _extentTAAOutput, false, false));
         _frameReady = false;
     }
 
-    //coCHECK(_draw->SubmitStretchPics(commandBuffer));
+    //VO_CHECK(_draw->SubmitStretchPics(commandBuffer));
 
     VkSemaphore waitSemaphores = _semaphoreGroups[_currentFrameInFlight]._imageAvailable;
     VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSemaphore signalSemaphore = _semaphoreGroups[_currentFrameInFlight]._renderFinished;
 
-    assert(_graphicsQueue);
+    VO_ASSERT(_graphicsQueue);
     VO_CHECK(SubmitCommandBuffer(commandBuffer, _graphicsQueue, 1,
         &waitSemaphores, &waitStages, 1, &signalSemaphore, _fencesFrameSync[_currentFrameInFlight]));
 
@@ -819,6 +916,11 @@ void Renderer::EndRender()
         VO_CHECK(Recreate());
 
     ++_frameCounter;
+}
+
+bool Renderer::UpdateUBO()
+{
+    return true;
 }
 
 void Renderer::SetObjectName(uint64 object, VkObjectType objectType, const char* name)
