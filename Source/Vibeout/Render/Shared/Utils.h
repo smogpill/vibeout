@@ -66,9 +66,9 @@ private:
 };
 
 #ifdef VO_DEBUG
-#define VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_) _ScopeVkCommandsLabel coCONCAT(_scopeCommandBuffer_, __COUNTER__)(_commandBuffer_, _label_)
+#define VO_VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_) _ScopeVkCommandsLabel coCONCAT(_scopeCommandBuffer_, __COUNTER__)(_commandBuffer_, _label_)
 #else
-#define VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)
+#define VO_VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)
 #endif
 */
-#define VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)
+#define VO_VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)

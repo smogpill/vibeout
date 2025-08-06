@@ -179,7 +179,7 @@ void Buffers::UnmapStagingIfMapped()
 
 void Buffers::CopyFromStaging(VkCommandBuffer commands)
 {
-	VO_SCOPE_VK_CMD_LABEL(commands, "CopyFromStaging");
+	VO_VO_SCOPE_VK_CMD_LABEL(commands, "CopyFromStaging");
 	if (_mappedStaging)
 	{
 		std::vector<VkBufferCopy> copies;
