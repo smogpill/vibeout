@@ -7,6 +7,7 @@
 #include "Vibeout/Render/Shared/Buffers.h"
 #include "Vibeout/Render/Shared/Utils.h"
 #include "Vibeout/Render/Shared/Textures.h"
+#include "Vibeout/Render/Shared/Shaders.h"
 
 #define BARRIER_COMPUTE(cmd_buf, img) \
 	do { \
@@ -64,10 +65,10 @@ bool Denoiser::InitPipelines()
 
 	VkSpecializationInfo specInfo[] =
 	{
-		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[0] },
-		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[1] },
-		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[2] },
-		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[3] },
+		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32), .pData = &spec_data[0] },
+		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32), .pData = &spec_data[1] },
+		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32), .pData = &spec_data[2] },
+		{.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32), .pData = &spec_data[3] },
 	};
 
 	VkComputePipelineCreateInfo pipeline_info[(int)PipelineID::END] = {};
@@ -77,73 +78,73 @@ bool Denoiser::InitPipelines()
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::GRADIENT_IMAGE];
-		info.stage = SHADER_STAGE(ASVGF_GRADIENT_IMG_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("AsvgfGradientImg.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::GRADIENT_ATROUS];
-		info.stage = SHADER_STAGE(ASVGF_GRADIENT_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("AsvgfGradientAtrous.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_atrous;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::GRADIENT_REPROJECT];
-		info.stage = SHADER_STAGE(ASVGF_GRADIENT_REPROJECT_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("AsvgfGradientReproject.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::TEMPORAL];
-		info.stage = SHADER_STAGE(ASVGF_TEMPORAL_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("AsvgfTemporal.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::ATROUS_LF];
-		info.stage = SHADER_STAGE(ASVGF_LF_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("AsvgLf.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_atrous;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::ATROUS_ITER_0];
-		info.stage = SHADER_STAGE_SPEC(ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[0]);
+		info.stage = SHADER_STAGE_SPEC("AsvgfAtrous.comp", VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[0]);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::ATROUS_ITER_1];
-		info.stage = SHADER_STAGE_SPEC(ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[1]);
+		info.stage = SHADER_STAGE_SPEC("AsvgfAtrous.comp", VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[1]);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::ATROUS_ITER_2];
-		info.stage = SHADER_STAGE_SPEC(ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[2]);
+		info.stage = SHADER_STAGE_SPEC("AsvgfAtrous.comp", VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[2]);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::ATROUS_ITER_3];
-		info.stage = SHADER_STAGE_SPEC(ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[3]);
+		info.stage = SHADER_STAGE_SPEC("AsvgfAtrous.comp", VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[3]);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::CHECKERBOARD_INTERLEAVE];
-		info.stage = SHADER_STAGE(CHECKERBOARD_INTERLEAVE_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("CheckerboardInterleave.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_general;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::TAAU];
-		info.stage = SHADER_STAGE(ASVGF_TAAU_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("AsvgfTaau.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_taa;
 	}
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::COMPOSITING];
-		info.stage = SHADER_STAGE(COMPOSITING_COMP, VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("Compositing.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_general;
 	}
 
@@ -193,7 +194,7 @@ bool Denoiser::Init()
 		info.pushConstantRangeCount = 1;
 		info.pPushConstantRanges = &push_constant_range_atrous;
 		VO_TRY_VK(vkCreatePipelineLayout(device, &info, nullptr, &_pipeline_layout_atrous));
-		SET_VK_NAME(_pipeline_layout_atrous, "Atrous");
+		_renderer.SetObjectName(_pipeline_layout_atrous, "Atrous");
 	}
 
 	// Pipeline layout: General
@@ -203,7 +204,7 @@ bool Denoiser::Init()
 		info.setLayoutCount = std::size(desc_set_layouts);
 		info.pSetLayouts = desc_set_layouts;
 		VO_TRY_VK(vkCreatePipelineLayout(device, &info, nullptr, &_pipeline_layout_general));
-		SET_VK_NAME(_pipeline_layout_general, "General");
+		_renderer.SetObjectName(_pipeline_layout_general, "General");
 	}
 
 	// Pipeline layout: TAA
@@ -213,7 +214,7 @@ bool Denoiser::Init()
 		info.setLayoutCount = std::size(desc_set_layouts);
 		info.pSetLayouts = desc_set_layouts;
 		VO_TRY_VK(vkCreatePipelineLayout(device, &info, nullptr, &_pipeline_layout_taa));
-		SET_VK_NAME(_pipeline_layout_taa, "TAA");
+		_renderer.SetObjectName(_pipeline_layout_taa, "TAA");
 	}
 
 	return true;
@@ -426,14 +427,14 @@ bool Denoiser::Compositing(VkCommandBuffer commands)
 bool Denoiser::Interleave(VkCommandBuffer commands)
 {
 	VO_SCOPE_VK_CMD_LABEL(commands, "RenderDenoiser::Interleave");
-	RenderUniformBuffer* uniformBuffer = _renderer.GetUniformBuffer();
-	VO_TRY(uniformBuffer);
-	RenderTextures* textures = _renderer.GetTextures();
+	Buffers* buffers = _renderer._buffers;
+	VO_TRY(buffers);
+	Textures* textures = _renderer._textures;
 	VO_TRY(textures);
 
 	VkDescriptorSet desc_sets[] =
 	{
-		uniformBuffer->GetDescriptorSet(),
+		buffers->GetDescriptorSet(),
 		textures->GetCurrentDescSet()
 	};
 
@@ -443,8 +444,8 @@ bool Denoiser::Interleave(VkCommandBuffer commands)
 
 	// dispatch using the image dimensions, not render dimensions - to clear the unused area with black color
 	vkCmdDispatch(commands,
-		(_renderer._extent_screen_images.width + 15) / 16,
-		(_renderer._extent_screen_images.height + 15) / 16,
+		(_renderer._extentScreenImages.width + 15) / 16,
+		(_renderer._extentScreenImages.height + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(commands, textures->GetImage(ImageID::FLAT_COLOR));
@@ -456,14 +457,14 @@ bool Denoiser::Interleave(VkCommandBuffer commands)
 bool Denoiser::TAA(VkCommandBuffer commands)
 {
 	VO_SCOPE_VK_CMD_LABEL(commands, "RenderDenoiser::TAA");
-	RenderUniformBuffer* uniformBuffer = _renderer.GetUniformBuffer();
-	VO_TRY(uniformBuffer);
-	RenderTextures* textures = _renderer.GetTextures();
+	Buffers* buffers = _renderer._buffers;
+	VO_TRY(buffers);
+	Textures* textures = _renderer._textures;
 	VO_TRY(textures);
 
 	VkDescriptorSet desc_sets[] =
 	{
-		uniformBuffer->GetDescriptorSet(),
+		buffers->GetDescriptorSet(),
 		textures->GetCurrentDescSet()
 	};
 
@@ -472,17 +473,17 @@ bool Denoiser::TAA(VkCommandBuffer commands)
 	vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_COMPUTE,
 		_pipeline_layout_taa, 0, std::size(desc_sets), desc_sets, 0, 0);
 
-	VkExtent2D dispatch_size = _renderer._extent_taa_output;
+	VkExtent2D dispatchSize = _renderer._extentTAAOutput;
 
-	if (dispatch_size.width < _renderer._extent_taa_images.width)
-		dispatch_size.width += 8;
+	if (dispatchSize.width < _renderer._extentTAAImages.width)
+		dispatchSize.width += 8;
 
-	if (dispatch_size.height < _renderer._extent_taa_images.height)
-		dispatch_size.height += 8;
+	if (dispatchSize.height < _renderer._extentTAAImages.height)
+		dispatchSize.height += 8;
 
 	vkCmdDispatch(commands,
-		(dispatch_size.width + 15) / 16,
-		(dispatch_size.height + 15) / 16,
+		(dispatchSize.width + 15) / 16,
+		(dispatchSize.height + 15) / 16,
 		1);
 	BARRIER_COMPUTE(commands, textures->GetImage(ImageID::ASVGF_TAA_A));
 	BARRIER_COMPUTE(commands, textures->GetImage(ImageID::ASVGF_TAA_B));

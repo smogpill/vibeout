@@ -40,7 +40,7 @@
 	{ \
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, \
 		.stage = _stage, \
-		.module = _renderer.GetShaders()->GetShaderModule(ShaderModule::_module), \
+		.module = _renderer._shaders->GetShaderModule(_module), \
 		.pName = "main" \
 	}
 
@@ -48,7 +48,7 @@
 	{ \
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, \
 		.stage = _stage, \
-		.module = _renderer.GetShaders()->GetShaderModule(ShaderModule::_module), \
+		.module = _renderer._shaders->GetShaderModule(_module), \
 		.pName = "main", \
 		.pSpecializationInfo = _spec, \
 	}
@@ -66,9 +66,9 @@ private:
 };
 
 #ifdef VO_DEBUG
-#define VO_VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_) _ScopeVkCommandsLabel coCONCAT(_scopeCommandBuffer_, __COUNTER__)(_commandBuffer_, _label_)
+#define VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_) _ScopeVkCommandsLabel coCONCAT(_scopeCommandBuffer_, __COUNTER__)(_commandBuffer_, _label_)
 #else
-#define VO_VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)
+#define VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)
 #endif
 */
-#define VO_VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)
+#define VO_SCOPE_VK_CMD_LABEL(_commandBuffer_, _label_)

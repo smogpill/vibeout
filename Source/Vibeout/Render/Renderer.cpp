@@ -7,6 +7,7 @@
 #include "Vibeout/Render/Shared/Textures.h"
 #include "Vibeout/Render/Shared/Buffers.h"
 #include "Vibeout/Render/Draw/PathTracer.h"
+#include "Vibeout/Render/Post/Denoiser.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -94,6 +95,7 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 Renderer::~Renderer()
 {
     ShutdownPipelines();
+    delete _denoiser;
     delete _pathTracer;
     delete _buffers;
     delete _textures;
@@ -135,6 +137,8 @@ bool Renderer::Init()
     _buffers = new Buffers(*this, result);
     VO_TRY(result);
     _pathTracer = new PathTracer(*this, result);
+    VO_TRY(result);
+    _denoiser = new Denoiser(*this, result);
     VO_TRY(result);
     VO_TRY(InitPipelines());
 	return true;

@@ -182,7 +182,7 @@ void PathTracer::ShutdownPipelines()
 
 void PathTracer::SetupPipeline(VkCommandBuffer cmd_buf, VkPipelineBindPoint bind_point, PipelineID pipelineID)
 {
-	VO_VO_SCOPE_VK_CMD_LABEL(cmd_buf, "PT:SetupPipeline");
+	VO_SCOPE_VK_CMD_LABEL(cmd_buf, "PT:SetupPipeline");
 	const Buffers* buffers = _renderer._buffers;
 	VO_ASSERT(buffers);
 	const Textures* textures = _renderer._textures;
@@ -194,7 +194,7 @@ void PathTracer::SetupPipeline(VkCommandBuffer cmd_buf, VkPipelineBindPoint bind
 
 void PathTracer::DispatchRays(VkCommandBuffer cmd_buf, PipelineID pipelineID, PushConstants push, uint32_t width, uint32_t height, uint32_t depth)
 {
-	VO_VO_SCOPE_VK_CMD_LABEL(cmd_buf, "DispatchRays");
+	VO_SCOPE_VK_CMD_LABEL(cmd_buf, "DispatchRays");
 	SetupPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineID);
 	vkCmdPushConstants(cmd_buf, _pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
 	vkCmdDispatch(cmd_buf, (width + 7) / 8, (height + 7) / 8, depth);
@@ -202,7 +202,7 @@ void PathTracer::DispatchRays(VkCommandBuffer cmd_buf, PipelineID pipelineID, Pu
 
 void PathTracer::TracePrimaryRays(VkCommandBuffer commandBuffer)
 {
-	VO_VO_SCOPE_VK_CMD_LABEL(commandBuffer, "TracePrimaryRays");
+	VO_SCOPE_VK_CMD_LABEL(commandBuffer, "TracePrimaryRays");
 	Textures* textures = _renderer._textures;
 	VO_ASSERT(textures);
 	const Buffers* buffers = _renderer._buffers;
@@ -258,7 +258,7 @@ void PathTracer::TracePrimaryRays(VkCommandBuffer commandBuffer)
 
 void PathTracer::TraceLighting(VkCommandBuffer commandBuffer, int nbBounces)
 {
-	VO_VO_SCOPE_VK_CMD_LABEL(commandBuffer, "TraceLighting");
+	VO_SCOPE_VK_CMD_LABEL(commandBuffer, "TraceLighting");
 	Textures* textures = _renderer._textures;
 	VO_ASSERT(textures);
 
@@ -272,7 +272,7 @@ void PathTracer::TraceLighting(VkCommandBuffer commandBuffer, int nbBounces)
 	}
 
 	{
-		VO_VO_SCOPE_VK_CMD_LABEL(commandBuffer, "DirectLighting");
+		VO_SCOPE_VK_CMD_LABEL(commandBuffer, "DirectLighting");
 		//pipeline_index_t pipeline = (cvar_pt_caustics->value != 0) ? PIPELINE_DIRECT_LIGHTING_CAUSTICS : PIPELINE_DIRECT_LIGHTING;
 		const PipelineID pipeline = PipelineID::DIRECT_LIGHTING;
 
@@ -303,7 +303,7 @@ void PathTracer::TraceLighting(VkCommandBuffer commandBuffer, int nbBounces)
 	for (int bounceIdx = 0; bounceIdx < nbBounces; ++bounceIdx)
 	{
 		{
-			VO_VO_SCOPE_VK_CMD_LABEL(commandBuffer, std::format("IndirectLighting{}", bounceIdx).c_str());
+			VO_SCOPE_VK_CMD_LABEL(commandBuffer, std::format("IndirectLighting{}", bounceIdx).c_str());
 			PipelineID pipeline = (PipelineID)((int)PipelineID::INDIRECT_LIGHTING_0 + bounceIdx);
 
 			PushConstants push;

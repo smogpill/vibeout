@@ -7,6 +7,7 @@ class Shaders;
 class Textures;
 class Buffers;
 class PathTracer;
+class Denoiser;
 
 template<typename T>
 struct GetVkObjectType;
@@ -47,6 +48,7 @@ private:
 	friend Textures;
 	friend Buffers;
 	friend PathTracer;
+	friend Denoiser;
 
 	struct SemaphoreGroup
 	{
@@ -165,4 +167,5 @@ private:
 	Textures* _textures = nullptr;
 	Buffers* _buffers = nullptr;
 	PathTracer* _pathTracer = nullptr;
+	Denoiser* _denoiser = nullptr;
 };
