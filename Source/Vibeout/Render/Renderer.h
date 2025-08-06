@@ -73,8 +73,9 @@ private:
 	bool InitSemaphores();
 	bool InitFences();
 	bool InitSwapChain();
-
 	void ShutdownSwapChain();
+	bool InitPipelines();
+	void ShutdownPipelines();
 
 	bool Recreate();
 

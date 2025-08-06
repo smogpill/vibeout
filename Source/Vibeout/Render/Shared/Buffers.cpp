@@ -15,18 +15,17 @@ Buffers::Buffers(Renderer& renderer, bool& result)
 
 Buffers::~Buffers()
 {
+	UnmapStagingIfMapped();
 	const VkDevice device = _renderer.GetDevice();
 	if (_descPool)
 		vkDestroyDescriptorPool(device, _descPool, nullptr);
 	if (_descSetLayout)
 		vkDestroyDescriptorSetLayout(device, _descSetLayout, nullptr);
 
-	for (BufferGroup& buffer : _bufferGroups)
-	{
-		for (Buffer*& b : buffer._hostBuffers)
-			delete b;
-		delete buffer._deviceBuffer;
-	}
+	for (Buffer*& b : _stagingBuffers)
+		delete b;
+	for (Buffer*& b : _deviceBuffers)
+		delete b;
 }
 
 bool Buffers::Init()
@@ -36,167 +35,213 @@ bool Buffers::Init()
 	const VkPhysicalDevice physicalDevice = _renderer._physicalDevice;
 	VO_TRY(physicalDevice);
 
-	VkDescriptorPoolSize pool_sizes[(int)BufferID::END] = {};
-	VkDescriptorSetLayoutBinding ubo_layout_bindings[(int)BufferID::END] = {};
+	VkDescriptorType descriptorTypes[std::size(_deviceBuffers)];
+	for (uint i = 0; i < std::size(descriptorTypes); ++i)
+		descriptorTypes[i] = i == 0 ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
-	ubo_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	ubo_layout_bindings[0].descriptorCount = 1;
-	ubo_layout_bindings[0].binding = GLOBAL_UBO_BINDING_IDX;
-	ubo_layout_bindings[0].stageFlags = VK_SHADER_STAGE_ALL;
-	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	pool_sizes[0].descriptorCount = 1;
+	VkDescriptorSetLayoutBinding layoutBindings[std::size(_deviceBuffers)] = {};
+	VkDescriptorPoolSize poolSizes[std::size(_deviceBuffers)] = {};
 
-	ubo_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	ubo_layout_bindings[1].descriptorCount = 1;
-	ubo_layout_bindings[1].binding = GLOBAL_TLAS_BINDING_IDX;
-	ubo_layout_bindings[1].stageFlags = VK_SHADER_STAGE_ALL;
-	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	pool_sizes[1].descriptorCount = 1;
-
-	VkDescriptorSetLayoutCreateInfo layout_info =
+	for (int bufferIdx = 0; bufferIdx < std::size(_deviceBuffers); ++bufferIdx)
 	{
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = std::size(ubo_layout_bindings),
-		.pBindings = ubo_layout_bindings,
-	};
+		VkDescriptorSetLayoutBinding& binding = layoutBindings[bufferIdx];
+		binding.descriptorType = descriptorTypes[bufferIdx];
+		binding.descriptorCount = 1;
+		binding.binding = bufferIdx;
+		binding.stageFlags = VK_SHADER_STAGE_ALL;
 
-	VO_TRY_VK(vkCreateDescriptorSetLayout(device, &layout_info, nullptr, &_descSetLayout));
+		VkDescriptorPoolSize& poolSize = poolSizes[bufferIdx];
+		poolSize.type = binding.descriptorType;
+		poolSize.descriptorCount = 1;
+	}
 
-	const VkMemoryPropertyFlags host_memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	// Layout
+	{
+		VkDescriptorSetLayoutCreateInfo info =
+		{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = std::size(layoutBindings),
+			.pBindings = layoutBindings,
+		};
+
+		VO_TRY_VK(vkCreateDescriptorSetLayout(device, &info, nullptr, &_descSetLayout));
+	}
+
 	const VkMemoryPropertyFlags device_memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-	/*
-	VkPhysicalDeviceProperties properties;
-	vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-	size_t alignment = properties.limits.minUniformBufferOffsetAlignment;
-	*/
-
-	_bufferGroups[(int)BufferID::UNIFORM]._size = sizeof(GlobalUniformBuffer);
-	_bufferGroups[(int)BufferID::TLAS]._size = 1024; // TODO
-
-	for (BufferGroup& bufferGroup : _bufferGroups)
+	// Device buffers
 	{
-		for (int i = 0; i < maxFramesInFlight; ++i)
+		Buffer::Setup setup;
+		setup._memProps = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+		// Uniform
 		{
-			Buffer::Setup setup;
-			setup._size = bufferGroup._size;
-			setup._usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			setup._memProps = host_memory_flags;
+			setup._size = sizeof(GlobalUniformBuffer);
+			setup._usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			bool result;
-			bufferGroup._hostBuffers[i] = new Buffer(_renderer, setup, result);
+			_deviceBuffers[(int)BufferID::UNIFORM] = new Buffer(_renderer, setup, result);
 			VO_TRY(result);
 		}
 
+		// TLAS
 		{
-			Buffer::Setup setup;
-			setup._size = bufferGroup._size;
-			setup._usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			setup._memProps = device_memory_flags;
+			setup._size = 1024; // TODO
+			setup._usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			bool result;
-			bufferGroup._deviceBuffer = new Buffer(_renderer, setup, result);
+			_deviceBuffers[(int)BufferID::TLAS] = new Buffer(_renderer, setup, result);
 			VO_TRY(result);
 		}
 	}
 
-	VkDescriptorPoolCreateInfo pool_info = {};
+	// Staging buffers
 	{
-		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		pool_info.poolSizeCount = std::size(pool_sizes);
-		pool_info.pPoolSizes = pool_sizes;
-		pool_info.maxSets = 1;
-	};
+		size_t stagingBufferSize = 0;
+		for (const Buffer* deviceBuffer : _deviceBuffers)
+			stagingBufferSize += deviceBuffer->GetSize();
 
-	VO_TRY_VK(vkCreateDescriptorPool(device, &pool_info, nullptr, &_descPool));
+		Buffer::Setup setup;
+		setup._usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		setup._memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		setup._size = stagingBufferSize;
 
-	VkDescriptorSetAllocateInfo descriptor_set_alloc_info =
+		for (Buffer*& buffer : _stagingBuffers)
+		{
+			bool result;
+			buffer = new Buffer(_renderer, setup, result);
+			VO_TRY(result);
+		}
+	}
+
+	// Pool
 	{
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = _descPool,
-		.descriptorSetCount = 1,
-		.pSetLayouts = &_descSetLayout,
-	};
+		VkDescriptorPoolCreateInfo info = {};
+		{
+			info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+			info.poolSizeCount = std::size(poolSizes);
+			info.pPoolSizes = poolSizes;
+			info.maxSets = 1;
+		};
 
-	VO_TRY_VK(vkAllocateDescriptorSets(device, &descriptor_set_alloc_info, &_descSet));
+		VO_TRY_VK(vkCreateDescriptorPool(device, &info, nullptr, &_descPool));
+	}
 
-	VkDescriptorBufferInfo uniformBufInfo =
+	// Desc set
 	{
-		.buffer = _bufferGroups[(int)BufferID::UNIFORM]._deviceBuffer->GetBuffer(),
-		.offset = 0,
-		.range = _bufferGroups[(int)BufferID::UNIFORM]._size,
-	};
+		VkDescriptorSetAllocateInfo info =
+		{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.descriptorPool = _descPool,
+			.descriptorSetCount = 1,
+			.pSetLayouts = &_descSetLayout,
+		};
 
-	VkDescriptorBufferInfo tlasBufInfo =
+		VO_TRY_VK(vkAllocateDescriptorSets(device, &info, &_descSet));
+	}
+
+	// Update descriptor sets
 	{
-		.buffer = _bufferGroups[(int)BufferID::TLAS]._deviceBuffer->GetBuffer(),
-		.offset = 0,
-		.range = _bufferGroups[(int)BufferID::TLAS]._size,
-	};
+		VkDescriptorBufferInfo bufferInfos[(int)BufferID::END] = {};
+		for (int bufferIdx = 0; bufferIdx < (int)BufferID::END; ++bufferIdx)
+		{
+			VkDescriptorBufferInfo& bufferInfo = bufferInfos[bufferIdx];
+			const Buffer* buffer = _deviceBuffers[bufferIdx];
+			bufferInfo.buffer = buffer->GetBuffer();
+			bufferInfo.range = buffer->GetSize();
+		}
 
-	VkWriteDescriptorSet writes[(int)BufferID::END] = {};
+		VkWriteDescriptorSet writes[(int)BufferID::END] = {};
 
-	writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	writes[0].dstSet = _descSet;
-	writes[0].dstBinding = GLOBAL_UBO_BINDING_IDX;
-	writes[0].dstArrayElement = 0;
-	writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	writes[0].descriptorCount = 1;
-	writes[0].pBufferInfo = &uniformBufInfo;
+		for (uint bufferIdx = 0; bufferIdx < std::size(_deviceBuffers); ++bufferIdx)
+		{
+			writes[bufferIdx].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writes[bufferIdx].dstSet = _descSet;
+			writes[bufferIdx].dstBinding = bufferIdx;
+			writes[bufferIdx].dstArrayElement = 0;
+			writes[bufferIdx].descriptorType = descriptorTypes[bufferIdx];
+			writes[bufferIdx].descriptorCount = 1;
+			writes[bufferIdx].pBufferInfo = &bufferInfos[bufferIdx];
+		}
 
-	writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	writes[1].dstSet = _descSet;
-	writes[1].dstBinding = GLOBAL_TLAS_BINDING_IDX;
-	writes[1].dstArrayElement = 0;
-	writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	writes[1].descriptorCount = 1;
-	writes[1].pBufferInfo = &tlasBufInfo;
-
-	vkUpdateDescriptorSets(device, std::size(writes), writes, 0, nullptr);
+		vkUpdateDescriptorSets(device, std::size(writes), writes, 0, nullptr);
+	}
 
 	return true;
 }
 
-void Buffers::CopyFromStaging(VkCommandBuffer commandBuffer, BufferID bufferID, int nbRegions, const VkBufferCopy* regions)
+void Buffers::UnmapStagingIfMapped()
 {
-	VO_SCOPE_VK_CMD_LABEL(commandBuffer, "CopyFromStaging");
-	BufferGroup& bufferGroup = _bufferGroups[(int)bufferID];
-	Buffer* ubo = bufferGroup._hostBuffers[_renderer._currentFrameInFlight];
-
-	vkCmdCopyBuffer(commandBuffer, ubo->GetBuffer(), bufferGroup._deviceBuffer->GetBuffer(), nbRegions, regions);
-
-	for (int regionIdx = 0; regionIdx < nbRegions; ++regionIdx)
+	if (_mappedStagingPtr)
 	{
-		const VkBufferCopy& copy = regions[regionIdx];
-		VkBufferMemoryBarrier barrier =
-		{
-			.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.buffer = bufferGroup._deviceBuffer->GetBuffer(),
-			.offset = copy.dstOffset,
-			.size = copy.size
-		};
-
-		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-			0, 0, nullptr, 1, &barrier, 0, nullptr);
+		_mappedStaging->Unmap();
+		_mappedStagingPtr = nullptr;
 	}
 }
 
-void* Buffers::Map(BufferID bufferID)
+void Buffers::CopyFromStaging(VkCommandBuffer commands)
 {
-	BufferGroup& bufferGroup = _bufferGroups[(int)bufferID];
-	Buffer* hostBuffer = bufferGroup._hostBuffers[_renderer._currentFrameInFlight];
-	if (!hostBuffer)
-		return nullptr;
+	VO_SCOPE_VK_CMD_LABEL(commands, "CopyFromStaging");
+	if (_mappedStaging)
+	{
+		std::vector<VkBufferCopy> copies;
+		copies.reserve(_uploadRequests.size());
 
-	return hostBuffer->Map();
+		for (int bufferID = 0; bufferID < (int)BufferID::END; ++bufferID)
+		{
+			copies.clear();
+			for (const UploadRequest& request : _uploadRequests)
+			{
+				if ((int)request._bufferID == bufferID)
+				{
+					copies.push_back(request._copyVK);
+				}
+			}
+
+			if (!copies.empty())
+			{
+				Buffer* deviceBuffer = _deviceBuffers[(int)bufferID];
+				vkCmdCopyBuffer(commands, _mappedStaging->GetBuffer(), deviceBuffer->GetBuffer(), (uint32)copies.size(), copies.data());
+
+				for (const VkBufferCopy& copy : copies)
+				{
+					VkBufferMemoryBarrier barrier =
+					{
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+						.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+						.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = deviceBuffer->GetBuffer(),
+						.offset = copy.dstOffset,
+						.size = copy.size
+					};
+
+					vkCmdPipelineBarrier(commands, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						0, 0, nullptr, 1, &barrier, 0, nullptr);
+				}
+			}
+
+		}
+
+		UnmapStagingIfMapped();
+	}
 }
 
-void Buffers::Unmap(BufferID bufferID)
+void* Buffers::AllocateInStaging(BufferID bufferID, uint32 offset, uint32 size)
 {
-	BufferGroup& bufferGroup = _bufferGroups[(int)bufferID];
-	Buffer* hostBuffer = bufferGroup._hostBuffers[_renderer._currentFrameInFlight];
-	if (hostBuffer)
-		hostBuffer->Unmap();
+	if (_mappedStaging == nullptr)
+	{
+		_mappedStaging = _stagingBuffers[_renderer._currentFrameInFlight];
+		_mappedStagingPtr = _mappedStaging->Map();
+	}
+	if (_allocatedInStaging + size < _mappedStaging->GetSize())
+	{
+		void* buffer = (void*)((intptr_t)_mappedStagingPtr + _allocatedInStaging);
+		_allocatedInStaging += size;
+		return buffer;
+	}
+	else
+	{
+		VO_ASSERT(false);
+		return nullptr;
+	}
 }

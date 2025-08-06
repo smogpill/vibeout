@@ -20,26 +20,30 @@ public:
 	Buffers(Renderer& renderer, bool& result);
 	~Buffers();
 
-	void CopyFromStaging(VkCommandBuffer commandBuffer, BufferID bufferID, int nbRegions, const VkBufferCopy* regions);
+	void CopyFromStaging(VkCommandBuffer commands);
 	const VkDescriptorSet& GetDescriptorSet() const { return _descSet; }
 	const VkDescriptorSetLayout& GetDescriptorSetLayout() const { return _descSetLayout; }
-	Buffer* GetDeviceBuffer(BufferID bufferID) const { return _bufferGroups[(int)bufferID]._deviceBuffer; }
-	void* Map(BufferID bufferID);
-	void Unmap(BufferID bufferID);
+	Buffer* GetDeviceBuffer(BufferID bufferID) const { return _deviceBuffers[(int)bufferID]; }
+	void* AllocateInStaging(BufferID bufferID, uint32 offset, uint32 size);
 
 private:
 	bool Init();
+	void UnmapStagingIfMapped();
 
-	struct BufferGroup
+	struct UploadRequest
 	{
-		Buffer* _hostBuffers[maxFramesInFlight] = {};
-		Buffer* _deviceBuffer = nullptr;
-		size_t _size = 0;
+		BufferID _bufferID;
+		VkBufferCopy _copyVK;
 	};
 
 	Renderer& _renderer;
-	BufferGroup _bufferGroups[(int)BufferID::END];
+	Buffer* _stagingBuffers[maxFramesInFlight] = {};
+	Buffer* _deviceBuffers[(int)BufferID::END] = {};
 	VkDescriptorPool _descPool = nullptr;
 	VkDescriptorSetLayout _descSetLayout = nullptr;
 	VkDescriptorSet _descSet = nullptr;
+	uint32 _allocatedInStaging = 0;
+	Buffer* _mappedStaging = nullptr;
+	void* _mappedStagingPtr = nullptr;
+	std::vector<UploadRequest> _uploadRequests;
 };

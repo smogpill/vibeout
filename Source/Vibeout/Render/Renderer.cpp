@@ -92,6 +92,7 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 
 Renderer::~Renderer()
 {
+    ShutdownPipelines();
     delete _buffers;
     delete _textures;
     delete _shaders;
@@ -131,6 +132,7 @@ bool Renderer::Init()
     VO_TRY(result);
     _buffers = new Buffers(*this, result);
     VO_TRY(result);
+    VO_TRY(InitPipelines());
 	return true;
 }
 
@@ -605,12 +607,25 @@ void Renderer::ShutdownSwapChain()
     }
 }
 
+bool Renderer::InitPipelines()
+{
+    return true;
+}
+
+void Renderer::ShutdownPipelines()
+{
+}
+
 bool Renderer::Recreate()
 {
     vkDeviceWaitIdle(_device);
+    ShutdownPipelines();
+    _textures->ShutImages();
     ShutdownSwapChain();
     UpdateScreenImagesSize();
     VO_TRY(InitSwapChain());
+    VO_TRY(_textures->InitImages());
+    VO_TRY(InitPipelines());
     _waitForIdleFrames = maxFramesInFlight * 2;
     return true;
 }
