@@ -41,6 +41,8 @@ bool Shaders::Init()
 	VO_TRY(InitModule("AsvgfTaau.comp"));
 	VO_TRY(InitModule("CheckerboardInterleave.comp"));
 	VO_TRY(InitModule("Compositing.comp"));
+	VO_TRY(InitModule("StretchPic.vert"));
+	VO_TRY(InitModule("StretchPic.frag"));
 	VO_TRY(InitModule("FinalBlit.vert"));
 	VO_TRY(InitModule("FinalBlit.frag"));
 

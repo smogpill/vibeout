@@ -11,6 +11,7 @@
 #include "Vibeout/Render/Post/Denoiser.h"
 #include "Vibeout/Render/Post/Bloom.h"
 #include "Vibeout/Render/Post/ToneMapping.h"
+#include "Vibeout/Render/Post/Draw.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -98,6 +99,7 @@ Renderer::Renderer(SDL_Window& window, bool& result)
 Renderer::~Renderer()
 {
     ShutdownPipelines();
+    delete _draw;
     delete _toneMapping;
     delete _bloom;
     delete _denoiser;
@@ -152,6 +154,8 @@ bool Renderer::Init()
     _bloom = new Bloom(*this, result);
     VO_TRY(result);
     _toneMapping = new ToneMapping(*this, result);
+    VO_TRY(result);
+    _draw = new Draw(*this, result);
     VO_TRY(result);
 
     VO_TRY(_textures->InitImages());
@@ -637,11 +641,13 @@ bool Renderer::InitPipelines()
     VO_TRY(_denoiser->InitPipelines());
     VO_TRY(_bloom->InitFramebufferRelated());
     VO_TRY(_toneMapping->InitPipelines());
+    VO_TRY(_draw->InitPipelines());
     return true;
 }
 
 void Renderer::ShutdownPipelines()
 {
+    _draw->ShutdownPipelines();
     _toneMapping->ShutdownPipelines();
     _bloom->ShutdownFramebufferRelated();
     _denoiser->ShutdownPipelines();

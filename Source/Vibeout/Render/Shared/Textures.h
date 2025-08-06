@@ -31,7 +31,8 @@ public:
 	const VkSampler& GetClampToBorderSampler() const { return tex_sampler_linear_clamp_border; }
 
 private:
-	friend class Finalizes;
+	friend class Draw;
+
 	bool Init();
 	bool InitInvalidTexture();
 	bool InitBlueNoise();
