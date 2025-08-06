@@ -80,5 +80,6 @@ bool Shaders::InitModule(const std::string& name)
 VkShaderModule Shaders::GetShaderModule(const std::string& name) const
 {
 	auto it = _moduleMap.find(name);
+	VO_ASSERT(it != _moduleMap.end(), "Unknown shader: {}", name);
 	return it != _moduleMap.end() ? it->second : nullptr;
 }

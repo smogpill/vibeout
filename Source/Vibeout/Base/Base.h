@@ -28,7 +28,7 @@ constexpr T AlignUp(const T val, const T alignment)
 #else
 #define VO_BREAKPOINT() std::breakpoint_if_debugging()
 #endif
-#define VO_ASSERT(_cond_) assert(_cond_)
+#define VO_ASSERT(_cond_, ...) assert(_cond_)
 #define VO_INFO(...) Info(std::format(__VA_ARGS__))
 #define VO_ERROR(...) Error(__FILE__, __LINE__, std::format(__VA_ARGS__))
 #define VO_SAFE_SCOPE(_x_) do { _x_ } while (!!false)

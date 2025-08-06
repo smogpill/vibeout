@@ -585,7 +585,7 @@ bool Bloom::InitPipelines()
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::DOWNSAMPLE];
-		info.stage = SHADER_STAGE("BloomDownsample.cpp", VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("BloomDownsample.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _downsamplePipelineLayout;
 	}
 	{

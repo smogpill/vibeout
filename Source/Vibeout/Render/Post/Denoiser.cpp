@@ -102,7 +102,7 @@ bool Denoiser::InitPipelines()
 
 	{
 		VkComputePipelineCreateInfo& info = pipeline_info[(int)PipelineID::ATROUS_LF];
-		info.stage = SHADER_STAGE("AsvgLf.comp", VK_SHADER_STAGE_COMPUTE_BIT);
+		info.stage = SHADER_STAGE("AsvgfLf.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 		info.layout = _pipeline_layout_atrous;
 	}
 
