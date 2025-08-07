@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
+#include "Vibeout/Game/GameBase.h"
 class Map; class Craft; class World; class Camera;
 
 class Game
@@ -9,16 +10,20 @@ class Game
 public:
 	Game();
 
-	void Update();
+	void Update(float deltaTime);
 	float GetDeltaTime() const { return _deltaTime; }
 	Camera* GetCamera() { return _camera; }
+	const GameState& GetState() const { return _state; }
 
 private:
-	void FixedUpdate();
+	void FixedUpdate(float deltaTime);
 
+	static const float s_fixedTimeStep;
+
+	GameState _state = GameState::NONE;
 	World* _world = nullptr;
-	float _deltaTime = 0.0f;
-	Map* _map = nullptr;
 	Craft* _craft = nullptr;
 	Camera* _camera = nullptr;
+	float _deltaTime = 0.0f;
+	float _fixedUpdateAccumulator = 0.0f;
 };

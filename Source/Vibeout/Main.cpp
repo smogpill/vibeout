@@ -6,6 +6,27 @@
 #include "Game/Game.h"
 #include "Render/Renderer.h"
 
+bool HandleEvent(const SDL_Event& event)
+{
+    switch (event.type)
+    {
+    case SDL_EVENT_QUIT: return false;
+    case SDL_EVENT_WINDOW_RESIZED: 
+    {
+        break;
+    }
+    case SDL_EVENT_WINDOW_FOCUS_GAINED:
+    {
+        break;
+    }
+    case SDL_EVENT_WINDOW_FOCUS_LOST:
+    {
+        break;
+    }
+    }
+    return true;
+}
+
 int main(int argc, char* argv[])
 {
     SDL_SetMainReady();
@@ -36,15 +57,26 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        int quit = 0;
-        SDL_Event e;
-        while (!quit)
-        {
-            while (SDL_PollEvent(&e))
-                if (e.type == SDL_EVENT_QUIT)
-                    quit = 1;
+        uint64 lastTime = SDL_GetTicks();
+        float deltaTime = 0.0f;
 
-            game.Update();
+        bool running = true;
+        SDL_Event event;
+        while (running)
+        {
+            uint64 currentTime = SDL_GetTicks();
+            deltaTime = (currentTime - lastTime) / 1000.0f;
+            lastTime = currentTime;
+
+            // Cap delta time to avoid spiral of death
+            if (deltaTime > 0.05f)
+                deltaTime = 0.05f;
+
+            while (SDL_PollEvent(&event))
+                if (!HandleEvent(event))
+                    running = false;
+
+            game.Update(deltaTime);
             renderer.Render();
         }
     }
