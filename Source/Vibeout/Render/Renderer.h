@@ -4,7 +4,7 @@
 #pragma once
 #include "Shared/Base.h"
 class Shaders; class Textures; class Buffers; class VertexBuffer; class PathTracer;
-class Denoiser; class Bloom; class ToneMapping; class Draw; class Game;
+class Denoiser; class Bloom; class ToneMapping; class Draw; class Game; struct GlobalUniformBuffer;
 
 template<typename T>
 struct GetVkObjectType;
@@ -162,6 +162,10 @@ private:
 	VkExtent2D _extentUnscaled = {};
 	VkExtent2D _extentTAAImages = {};
 	VkExtent2D _extentTAAOutput = {};
+
+	// Data
+	//----------------------------
+	GlobalUniformBuffer* _ubo = nullptr;
 
 	// Frame
 	//----------------------------

@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "Renderer.h"
+#include "Vibeout/Base/Transform.h"
 #include "Vibeout/Game/Game.h"
+#include "Vibeout/Game/Camera/Camera.h"
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Shared/Textures.h"
 #include "Vibeout/Render/Shared/Buffers.h"
@@ -101,6 +103,8 @@ Renderer::Renderer(SDL_Window& window, Game& game, bool& result)
 
 Renderer::~Renderer()
 {
+    delete _ubo;
+
     ShutdownPipelines();
     delete _draw;
     delete _toneMapping;
@@ -163,6 +167,9 @@ bool Renderer::Init()
 
     VO_TRY(_textures->InitImages());
     VO_TRY(InitPipelines());
+
+    _ubo = new GlobalUniformBuffer();
+
 	return true;
 }
 
@@ -920,6 +927,211 @@ void Renderer::EndRender()
 
 bool Renderer::UpdateUBO()
 {
+    VO_ASSERT(_buffers);
+    VO_ASSERT(_ubo);
+
+    Camera* camera = _game.GetCamera();
+    VO_ASSERT(camera);
+
+    const glm::mat4 view = camera->GetViewMatrix();
+    const glm::mat4 proj = camera->GetProjectionMatrix();
+    const Transform& camTransform = camera->GetNode().GetGlobalTransform();
+    const glm::vec3 camPos = camTransform.Translation();
+    const float verticalFOV = glm::radians(camera->GetVerticalFOV());
+
+    // Previous frame
+    memcpy(_ubo->_prevView, _ubo->_view, sizeof(float) * 16);
+    memcpy(_ubo->_prevProj, _ubo->_proj, sizeof(float) * 16);
+    memcpy(_ubo->_prevInvProj, _ubo->_invProj, sizeof(float) * 16);
+    _ubo->cylindrical_hfov_prev = _ubo->cylindrical_hfov;
+    _ubo->_prev_taa_output_width = _ubo->_taa_output_width;
+    _ubo->_prev_taa_output_height = _ubo->_taa_output_height;
+    _ubo->_projection_fov_scale_prev[0] = _ubo->_projection_fov_scale[0];
+    _ubo->_projection_fov_scale_prev[1] = _ubo->_projection_fov_scale[1];
+    _ubo->_prevWidth = _extentRenderPrev.width;
+    _ubo->_prevHeight = _extentRenderPrev.height;
+    _ubo->pt_projection = 0;
+    _extentRenderPrev = _extentRender;
+
+    // Vulkan has a reverse Y compared to other graphics API, so we have to adapt the Y axis.
+    glm::mat4 vulkanProj = proj;
+    vulkanProj[1].y *= -1.0f;
+
+    const glm::mat4 invView = glm::inverse(view);
+    const glm::mat4 invProj = glm::inverse(vulkanProj);
+
+    memcpy(_ubo->_view, &view[0].x, sizeof(float) * 16);
+    memcpy(_ubo->_proj, &vulkanProj[0].x, sizeof(float) * 16);
+    memcpy(_ubo->_invView, &invView[0].x, sizeof(float) * 16);
+    memcpy(_ubo->_invProj, &invProj[0].x, sizeof(float) * 16);
+    memcpy(_ubo->_camPos, &camPos.x, sizeof(float) * 3);
+    _ubo->_verticalFOV = camera->GetVerticalFOV();
+
+    /*
+    float V_CalcFov(float fov_x, float width, float height)
+    {
+        float    a;
+        float    x;
+
+        if (fov_x <= 0 || fov_x > 179)
+            Com_Error(ERR_DROP, "%s: bad fov: %f", __func__, fov_x);
+
+        x = width / tan(fov_x * (M_PI / 360));
+
+        a = atan(height / x);
+        a = a * (360 / M_PI);
+
+        return a;
+    }
+
+    create_projection_matrix(ubo->V, vkpt_refdef.z_near, vkpt_refdef.z_far, fd->fov_x, fd->fov_y);
+    */
+
+    /*
+    {
+        float raw_proj[16];
+        create_projection_matrix(raw_proj, vkpt_refdef.z_near, vkpt_refdef.z_far, fd->fov_x, fd->fov_y);
+
+        // In some cases (ex.: player setup), 'fd' will describe a viewport that is not full screen.
+        // Simulate that with a projection matrix adjustment to avoid modifying the rendering code.
+
+        float viewport_proj[16] = {
+            [0] = (float)fd->width / (float)qvk.extent_unscaled.width,
+            [12] = (float)(fd->x * 2 + fd->width - (int)qvk.extent_unscaled.width) / (float)qvk.extent_unscaled.width,
+            [5] = (float)fd->height / (float)qvk.extent_unscaled.height,
+            [13] = -(float)(fd->y * 2 + fd->height - (int)qvk.extent_unscaled.height) / (float)qvk.extent_unscaled.height,
+            [10] = 1.f,
+            [15] = 1.f
+        };
+
+        mult_matrix_matrix(P, viewport_proj, raw_proj);
+    }
+    */
+
+    float unscaled_aspect = (float)_extentUnscaled.width / (float)_extentUnscaled.height;
+    float fov_scale[2] = { 0.f, 0.f };
+
+    //if (panini)
+    if (false)
+    {
+        fov_scale[1] = glm::tan(verticalFOV / 2.f);
+        fov_scale[0] = fov_scale[1] * unscaled_aspect;
+    }
+    else
+    {
+        fov_scale[1] = verticalFOV / 2.f;
+        fov_scale[0] = fov_scale[1] * unscaled_aspect;
+    }
+
+    _ubo->_projection_fov_scale[0] = fov_scale[0];
+    _ubo->_projection_fov_scale[1] = fov_scale[1];
+    //_ubo->pt_projection = render_world ? cvar_pt_projection->integer : 0; // always use rectilinear projection when rendering the player setup view
+    _ubo->_currentFrameIdx = _frameCounter;
+    _ubo->_width = _extentRender.width;
+    _ubo->_height = _extentRender.height;
+    _ubo->_invWidth = 1.0f / (float)_extentRender.width;
+    _ubo->_invHeight = 1.0f / (float)_extentRender.height;
+    _ubo->_unscaledWidth = _extentUnscaled.width;
+    _ubo->_unscaledHeight = _extentUnscaled.height;
+    _ubo->_taaImageWidth = _extentTAAImages.width;
+    _ubo->_taaImageHeight = _extentTAAImages.height;
+    _ubo->_taa_output_width = _extentTAAOutput.width;
+    _ubo->_taa_output_height = _extentTAAOutput.height;
+    _ubo->_screenImageWidth = _extentScreenImages.width;
+    _ubo->_screenImageHeight = _extentScreenImages.height;
+    _ubo->_ptSwapCheckerboard = 0;
+
+    if (!_wantDenoising)
+    {
+        // disable fake specular because it is not supported without denoiser, and the result
+        // looks too dark with it missing
+        _ubo->pt_fake_roughness_threshold = 1.0f;
+
+        // swap the checkerboard fields every frame in reference or noisy mode to accumulate 
+        // both reflection and refraction in every pixel
+        _ubo->_ptSwapCheckerboard = (_frameCounter & 1);
+    }
+
+    /*
+    int camera_cluster_contents = viewleaf ? viewleaf->contents : 0;
+
+    if (camera_cluster_contents & CONTENTS_WATER)
+        ubo->medium = MEDIUM_WATER;
+    else if (camera_cluster_contents & CONTENTS_SLIME)
+        ubo->medium = MEDIUM_SLIME;
+    else if (camera_cluster_contents & CONTENTS_LAVA)
+        ubo->medium = MEDIUM_LAVA;
+    else
+        ubo->medium = MEDIUM_NONE;
+
+        */
+
+        //ubo->time = fd->time;
+
+        //bool fsr_enabled = vkpt_fsr_is_enabled();
+
+        /*
+        if (!ref_mode->enable_denoiser)
+        {
+            // disable fake specular because it is not supported without denoiser, and the result
+            // looks too dark with it missing
+            ubo->pt_fake_roughness_threshold = 1.f;
+
+            // swap the checkerboard fields every frame in reference or noisy mode to accumulate
+            // both reflection and refraction in every pixel
+            ubo->pt_swap_checkerboard = (qvk.frame_counter & 1);
+
+            if (ref_mode->enable_accumulation)
+            {
+                ubo->pt_texture_lod_bias = -log2f(sqrtf(get_accumulation_rendering_framenum()));
+
+                // disable the other stabilization hacks
+                ubo->pt_specular_anti_flicker = 0.f;
+                ubo->pt_sun_bounce_range = 10000.f;
+                ubo->pt_ndf_trim = 1.f;
+            }
+        }
+        else if (fsr_enabled || (qvk.effective_aa_mode == AA_MODE_UPSCALE))
+        {
+            // adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
+            float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
+            resolution_scale *= 0.01f;
+            clamp(resolution_scale, 0.1f, 1.f);
+            ubo->pt_texture_lod_bias = cvar_pt_texture_lod_bias->value + log2f(resolution_scale);
+        }*/
+
+    _ubo->temporal_blend_factor = 0.0f;
+    _ubo->flt_enable = _wantDenoising;
+    _ubo->flt_taa = _antiAliasing ? 1 : 0;
+    _ubo->pt_num_bounce_rays = _nbBounceRays;
+
+    if (_nbBounceRays < 1)
+        _ubo->pt_specular_mis = 0; // disable MIS if there are no specular rays
+
+    if (!_temporalFrameIsValid)
+    {
+        _ubo->flt_temporal_lf = 0;
+        _ubo->flt_temporal_hf = 0;
+        _ubo->flt_temporal_spec = 0;
+        _ubo->flt_taa = 0;
+    }
+
+    /*
+    if (_effectiveAAMode == AA_MODE_UPSCALE)
+    {
+        int taa_index = (int)(_frameCounter % s_nbTAASamples);
+        _ubo->sub_pixel_jitter[0] = _taa_samples[taa_index][0];
+        _ubo->sub_pixel_jitter[1] = _taa_samples[taa_index][1];
+    }
+    else */
+    {
+        _ubo->sub_pixel_jitter[0] = 0.f;
+        _ubo->sub_pixel_jitter[1] = 0.f;
+    }
+
+    _ubo->pt_cameras = 0;
+
+    _toneMapping->FillUBO(*_ubo);
     return true;
 }
 
