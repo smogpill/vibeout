@@ -115,6 +115,10 @@ private:
 	SDL_Window& _window;
 	Game& _game;
 
+	// State
+	//----------------------------
+	bool _running = false;
+
 	// Options
 	//----------------------------
 	bool _antiAliasing = false;

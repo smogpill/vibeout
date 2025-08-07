@@ -170,6 +170,8 @@ bool Renderer::Init()
 
     _ubo = new GlobalUniformBuffer();
 
+    _running = true;
+
 	return true;
 }
 
@@ -669,6 +671,7 @@ void Renderer::ShutdownPipelines()
 bool Renderer::Recreate()
 {
     vkDeviceWaitIdle(_device);
+    _running = false;
     ShutdownPipelines();
     _textures->ShutImages();
     ShutdownSwapChain();
@@ -677,6 +680,7 @@ bool Renderer::Recreate()
     VO_TRY(_textures->InitImages());
     VO_TRY(InitPipelines());
     _waitForIdleFrames = maxFramesInFlight * 2;
+    _running = true;
     return true;
 }
 
@@ -720,10 +724,6 @@ void Renderer::EvaluateAASettings()
 
 bool Renderer::BeginRender()
 {
-    VO_TRY(_physicalDevice);
-    VO_TRY(_device);
-    VO_TRY(_surface);
-
     _currentFrameInFlight = _frameCounter % maxFramesInFlight;
     VkResult fenceResult = vkWaitForFences(_device, 1, &_fencesFrameSync[_currentFrameInFlight], VK_TRUE, ~((uint64_t)0));
     if (fenceResult == VK_ERROR_DEVICE_LOST)
@@ -794,15 +794,15 @@ bool Renderer::BeginRender()
 
 bool Renderer::RenderContent()
 {
+    if (!_running)
+        return true;
     VO_TRY(_swapchain);
-
-    VO_ASSERT(!_frameReady);
     VO_TRY(_buffers);
     VO_TRY(_pathTracer);
-
-    EvaluateAASettings();
-
     VO_TRY(_graphicsQueue);
+    VO_ASSERT(!_frameReady);
+
+    VO_TRY(UpdateUBO());
 
     const uint32 previousFrameInFlight = _currentFrameInFlight ? (_currentFrameInFlight - 1) : (maxFramesInFlight - 1);
     VkSemaphore transfer_semaphores = _semaphoreGroups[_currentFrameInFlight]._transferFinished;
@@ -814,7 +814,7 @@ bool Renderer::RenderContent()
     {
         VkCommandBuffer cmds = BeginCommandBuffer(_graphicsCommandBuffers);
 
-        VO_TRY(UpdateUBO());
+        
 
         {
             VO_SCOPE_VK_CMD_LABEL(cmds, "Uploads + primary rays");
@@ -1132,6 +1132,10 @@ bool Renderer::UpdateUBO()
     _ubo->pt_cameras = 0;
 
     _toneMapping->FillUBO(*_ubo);
+
+    GlobalUniformBuffer* ubo = reinterpret_cast<GlobalUniformBuffer*>(_buffers->AllocateInStaging(Buffers::BufferID::UNIFORM, 0, sizeof(GlobalUniformBuffer)));
+    VO_TRY(ubo);
+    *ubo = *_ubo;
     return true;
 }
 
