@@ -103,6 +103,7 @@ Renderer::Renderer(SDL_Window& window, Game& game, bool& result)
 
 Renderer::~Renderer()
 {
+    vkDeviceWaitIdle(_device);
     delete _ubo;
 
     ShutdownPipelines();

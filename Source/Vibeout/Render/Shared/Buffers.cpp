@@ -15,7 +15,8 @@ Buffers::Buffers(Renderer& renderer, bool& result)
 
 Buffers::~Buffers()
 {
-	UnmapStagingIfMapped();
+	if (_mappedStaging)
+		_mappedStaging->Unmap();
 	const VkDevice device = _renderer.GetDevice();
 	if (_descPool)
 		vkDestroyDescriptorPool(device, _descPool, nullptr);
@@ -184,6 +185,8 @@ void Buffers::CopyFromStaging(VkCommandBuffer commands)
 	VO_SCOPE_VK_CMD_LABEL(commands, "CopyFromStaging");
 	if (_mappedStaging)
 	{
+		_mappedStaging->Unmap();
+
 		std::vector<VkBufferCopy> copies;
 		copies.reserve(_uploadRequests.size());
 
@@ -224,7 +227,9 @@ void Buffers::CopyFromStaging(VkCommandBuffer commands)
 		}
 
 		_uploadRequests.clear();
-		UnmapStagingIfMapped();
+		_mappedStagingPtr = nullptr;
+		_mappedStaging = nullptr;
+		_allocatedInStaging = 0;
 	}
 }
 
@@ -237,6 +242,12 @@ void* Buffers::AllocateInStaging(BufferID bufferID, uint32 offset, uint32 size)
 	}
 	if (_allocatedInStaging + size < _mappedStaging->GetSize())
 	{
+		UploadRequest request;
+		request._bufferID = bufferID;
+		request._copyVK.srcOffset = _allocatedInStaging;
+		request._copyVK.size = size;
+		request._copyVK.dstOffset = 0;
+		_uploadRequests.push_back(request);
 		void* buffer = (void*)((intptr_t)_mappedStagingPtr + _allocatedInStaging);
 		_allocatedInStaging += size;
 		return buffer;

@@ -12,10 +12,6 @@
 #define GLOBAL_STORAGE_DESC_SET_IDX 2
 #include "GlobalStorage.h"
 
-void main() {}
-
-#if 0
-
 #include "Lighting.glsl"
 #include "Geometry.glsl"
 #include "Compression.glsl"
@@ -121,5 +117,3 @@ void main()
     outColor.w = 1.0f;
     */
 }
-
-#endif

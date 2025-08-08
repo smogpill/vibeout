@@ -125,7 +125,7 @@ private:
 	bool _wantHDR = false;
 	bool _wantVSYNC = false;
 	bool _wantDenoising = false;
-	bool _wantBloom = true;
+	bool _wantBloom = false;
 	bool _wantToneMapping = true;
 	uint _nbBounceRays = 0;
 

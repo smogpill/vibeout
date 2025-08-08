@@ -12,10 +12,6 @@
 #define GLOBAL_STORAGE_DESC_SET_IDX 2
 #include "GlobalStorage.h"
 
-void main() {}
-
-#if 0
-
 #include "Base.glsl"
 #include "Compression.glsl"
 #include "Noise.glsl"
@@ -345,5 +341,3 @@ void main()
 		STORE_SH(IMG_PT_COLOR_LF_SH, IMG_PT_COLOR_LF_COCG, ipos, low_freq);
 	}
 }
-
-#endif

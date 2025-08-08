@@ -10,6 +10,7 @@
 #define NOGDI
 #define NOMINMAX
 //#define VMA_VULKAN_VERSION 1003000
+#define GLM_FORCE_XYZW_ONLY
 
 #include <cassert>
 #include <stdio.h>

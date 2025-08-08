@@ -31,12 +31,7 @@ struct Ray
 	vec3 d;
 };
 
-uint GetVoxelData(in uint idx)
-{
-	return _voxelBlocks[nonuniformEXT(idx >> VOXEL_BLOCK_INDEX_SHIFT)]._nodes[idx & VOXEL_BLOCK_OFFSET_MASK];
-	//return inVoxelData._nodes[idx];
-}
-
+/*
 uint GetTLASNode(in uint level, in uint idx)
 {
 	const uint offset = levelNodeOffsets[level] + idx;
@@ -51,9 +46,10 @@ uint GetTLASLeaf(in uint idx)
 uint GetBroadphaseCell(in uint idx)
 {
 	return inBroadphaseData._cells[idx];
-}
+}*/
 
 //-------------------------------------------------------
+#if 0
 vec4 CastLocal(in Ray ray, uint voxelPtr, in uint drawDepth, out vec3 norm)
 {
 
@@ -317,8 +313,51 @@ vec4 CastLocal(in Ray ray, uint voxelPtr, in uint drawDepth, out vec3 norm)
 
 	return vec4(curTMin, 0, 0, curNode);
 }
+#endif
+
+vec2 sphIntersect(in vec3 ro, in vec3 rd, in vec3 ce, float ra)
+{
+	vec3 oc = ro - ce;
+	float b = dot(oc, rd);
+	float c = dot(oc, oc) - ra * ra;
+	float h = b * b - c;
+	if (h < 0.0) return vec2(-1.0); // no intersection
+	h = sqrt(h);
+	return vec2(-b - h, -b + h);
+}
+
+vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
+{
+	//if (ray.d.x > 0.0f)
+	//	return vec4(0.1f, 0, 0, 0);
+	//else
+//		return vec4(-4, 0, 0, 0);
+	//norm = normalize(-vec3(1, 1, 1));
+	//return vec4(0.1f, 0, 0, 0);
 
 #if 1
+	vec3 sphereCenter = vec3(0, 0, -10);
+	float sphereRadius = 1.0f;
+
+	vec3 rayDir = normalize(ray.d);
+	vec2 ret = sphIntersect(vec3(0, 0, 0), rayDir, sphereCenter, sphereRadius);
+	float curTMin;
+	if (ret.x > 0.0f)
+	{
+		curTMin = ret.x / length(ray.d);
+		//curTMin = 0.1f;
+		vec3 hit = ray.o + rayDir * curTMin;
+		norm = normalize(hit - sphereCenter);
+	}
+	else
+	{
+		curTMin = -4.f;
+	}
+	return vec4(curTMin, 0, 0, 0);
+#endif
+}
+
+#if 0
 vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
 {
 	const uint globalMaxLevel = NB_WORLD_TLAS_LEVELS - 2;
@@ -539,126 +578,5 @@ vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
 	// 	if ((octantMask & 4) != 0) curCorner.z = 3.0f - curScale - curCorner.z;
 
 	return vec4(curTMin, 0, 0, curNode);
-}
-#endif
-
-//-------------------------------------------------------
-#if 0
-vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
-{
-	const vec3 absRayDir = abs(ray.d);
-
-	const float epsilon = 1e-20f;
-
-	if (absRayDir.x < epsilon) ray.d.x = copysignp(epsilon, ray.d.x);
-	if (absRayDir.y < epsilon) ray.d.y = copysignp(epsilon, ray.d.y);
-	if (absRayDir.z < epsilon) ray.d.z = copysignp(epsilon, ray.d.z);
-
-	const vec3 dir = normalize(ray.d);
-	const vec3 invDir = 1.0f / dir;
-
-	const uint gridWidth = 256;
-	const uint halfGridWidth = gridWidth / 2;
-	const ivec3 gridOrigin = ivec3(-halfGridWidth);
-	const float scale = 2.0f * rootHalfSide;
-
-	vec3 va = ray.o / scale - gridOrigin;
-	vec3 vb = (ray.o + ray.d) / scale - gridOrigin;
-	ivec3 a = ivec3(va);
-	ivec3 b = ivec3(vb);
-
-	// http://www.cse.yorku.ca/%7Eamana/research/grid.pdf
-	// https://www.flipcode.com/archives/Raytracing_Topics_Techniques-Part_4_Spatial_Subdivisions.shtml
-	// https://stackoverflow.com/questions/5186939/algorithm-for-drawing-a-4-connected-line
-
-	//ivec3 d = abs(b - a);
-
-	ivec3 posLocal = a;
-
-	ivec3 step;
-	step.x = dir.x > 0 ? 1 : -1;
-	step.y = dir.y > 0 ? 1 : -1;
-	step.z = dir.z > 0 ? 1 : -1;
-
-	Ray rayLocal;
-	rayLocal.d = ray.d / scale;
-
-	// Lazy security, should be improved: 
-	// ray should be clamped instead of totally ignored
-	if ((posLocal.x < 0) || (posLocal.x >= gridWidth) 
-		|| (posLocal.y < 0) || (posLocal.y >= gridWidth) 
-		|| (posLocal.z < 0) || (posLocal.z >= gridWidth))
-	{
-		return vec4(-4.f, 0, 0, 0);
-	}
-
-	ivec3 cellBoundary = a;
-	if (dir.x > 0) ++cellBoundary.x;
-	if (dir.y > 0) ++cellBoundary.y;
-	if (dir.z > 0) ++cellBoundary.z;
-
-	ivec3 bounds;
-	bounds.x = dir.x > 0 ? int(gridWidth) : -1;
-	bounds.y = dir.y > 0 ? int(gridWidth) : -1;
-	bounds.z = dir.z > 0 ? int(gridWidth) : -1;
-
-	//ivec3 error = d;
-	//int range = d.x + d.y + d.z;
-
-	vec3 tmax = (vec3(cellBoundary) - va) * invDir;
-	const vec3 tdelta = step * invDir;
-
-	while (true)
-	{
-		const uint gridIdx = posLocal.z * gridWidth * gridWidth + posLocal.y * gridWidth + posLocal.x;
-		const uint voxelPtr = GetBroadphaseCell(gridIdx);
-
-		if (voxelPtr != 0)
-		{
-			//norm = vec3(1, 0, 0);
-			//return vec4(0.1, 0, 0, 1);
-			vec3 normal;
-			rayLocal.o = va - posLocal;
-			vec4 result = CastLocal(rayLocal, voxelPtr, drawDepth, normal);
-			if (result.x > 0)
-			{
-				norm = normal;
-				return result;
-			}
-		}
-
-		if (tmax.x < tmax.y)
-		{
-			if (tmax.x < tmax.z)
-			{
-				posLocal.x += step.x;
-				if (posLocal.x == bounds.x) break;
-				tmax.x += tdelta.x;
-			}
-			else
-			{
-				posLocal.z += step.z;
-				if (posLocal.z == bounds.z) break;
-				tmax.z += tdelta.z;
-			}
-		}
-		else
-		{
-			if (tmax.y < tmax.z)
-			{
-				posLocal.y += step.y;
-				if (posLocal.y == bounds.y) break;
-				tmax.y += tdelta.y;
-			}
-			else
-			{
-				posLocal.z += step.z;
-				if (posLocal.z == bounds.z) break;
-				tmax.z += tdelta.z;
-			}
-		}
-	}
-
-	return vec4(-4.f, 0, 0, 0);
 }
 #endif
