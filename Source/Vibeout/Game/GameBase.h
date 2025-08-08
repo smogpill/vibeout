@@ -10,3 +10,10 @@ enum class GameState
 	SPAWNING_PLAYER,
 	RUNNING,
 };
+
+enum class CameraType
+{
+	GAME,
+	FREE,
+	END
+};

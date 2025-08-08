@@ -4,11 +4,13 @@
 #include "PCH.h"
 #include "Game.h"
 #include "Vibeout/World/World.h"
+#include "Vibeout/Game/Camera/Camera.h"
 
 const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 
 Game::Game()
 {
+	InitCameras();
 }
 
 void Game::Update(float rawDeltaTime)
@@ -27,4 +29,10 @@ void Game::Update(float rawDeltaTime)
 
 void Game::FixedUpdate(float deltaTime)
 {
+}
+
+void Game::InitCameras()
+{
+	_defaultCamera = new Camera();
+	_currentCamera = _defaultCamera;
 }

@@ -12,18 +12,20 @@ public:
 
 	void Update(float deltaTime);
 	float GetDeltaTime() const { return _deltaTime; }
-	Camera* GetCamera() { return _camera; }
+	Camera* GetCurrentCamera() { return _currentCamera; }
 	const GameState& GetState() const { return _state; }
 
 private:
 	void FixedUpdate(float deltaTime);
+	void InitCameras();
 
 	static const float s_fixedTimeStep;
 
 	GameState _state = GameState::NONE;
 	World* _world = nullptr;
 	Craft* _craft = nullptr;
-	Camera* _camera = nullptr;
+	Camera* _defaultCamera = nullptr;
+	Camera* _currentCamera = nullptr;
 	float _deltaTime = 0.0f;
 	float _fixedUpdateAccumulator = 0.0f;
 };

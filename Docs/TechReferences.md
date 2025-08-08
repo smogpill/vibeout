@@ -1,1 +1,5 @@
+# Vr
 [You Only Render Once: Enhancing Energy and Computation Efficiency of Mobile Virtual Reality](https://arxiv.org/pdf/2506.15183) [UploadVR.com](https://www.uploadvr.com/you-only-render-once-vr-frame-rate-improving-technique/)
+
+# Libs
+[Nuklear](https://github.com/Immediate-Mode-UI/Nuklear)

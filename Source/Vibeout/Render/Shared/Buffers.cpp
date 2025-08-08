@@ -170,10 +170,12 @@ bool Buffers::Init()
 
 void Buffers::UnmapStagingIfMapped()
 {
-	if (_mappedStagingPtr)
+	if (_mappedStaging)
 	{
 		_mappedStaging->Unmap();
 		_mappedStagingPtr = nullptr;
+		_mappedStaging = nullptr;
+		_allocatedInStaging = 0;
 	}
 }
 
@@ -219,9 +221,9 @@ void Buffers::CopyFromStaging(VkCommandBuffer commands)
 						0, 0, nullptr, 1, &barrier, 0, nullptr);
 				}
 			}
-
 		}
 
+		_uploadRequests.clear();
 		UnmapStagingIfMapped();
 	}
 }

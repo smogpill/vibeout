@@ -814,8 +814,6 @@ bool Renderer::RenderContent()
     {
         VkCommandBuffer cmds = BeginCommandBuffer(_graphicsCommandBuffers);
 
-        
-
         {
             VO_SCOPE_VK_CMD_LABEL(cmds, "Uploads + primary rays");
 
@@ -930,7 +928,7 @@ bool Renderer::UpdateUBO()
     VO_ASSERT(_buffers);
     VO_ASSERT(_ubo);
 
-    Camera* camera = _game.GetCamera();
+    Camera* camera = _game.GetCurrentCamera();
     VO_ASSERT(camera);
 
     const glm::mat4 view = camera->GetViewMatrix();
