@@ -12,6 +12,11 @@ void Camera::Rotate(float yaw, float pitch)
     _pitch = glm::clamp(_pitch, -pitchLimit, pitchLimit);
 }
 
+void Camera::SetAspectRatio(float aspectRatio)
+{
+    _aspectRatio = aspectRatio;
+}
+
 void Camera::OnUpdate(float deltaTime)
 {
     Transform global = _node.GetGlobalTransform();

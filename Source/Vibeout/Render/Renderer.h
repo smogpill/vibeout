@@ -41,7 +41,7 @@ public:
 	VkDeviceSize GetAvailableVideoMemory() const;
 	bool AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* memory);
 
-	void OnResize();
+	void OnWindowResized();
 
 private:
 	friend class Textures;
@@ -86,7 +86,7 @@ private:
 
 	bool Recreate();
 
-	void UpdateScreenImagesSize();
+	void UpdateSizes();
 	VkExtent2D GetScreenImageExtent() const;
 	VkExtent2D GetRenderExtent() const;
 	void EvaluateAASettings();

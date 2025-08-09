@@ -9,6 +9,7 @@ class Camera
 {
 public:
 	void Rotate(float yaw, float pitch);
+	void SetAspectRatio(float aspectRatio);
 	void OnUpdate(float deltaTime);
 
 	const Node& GetNode() const { return _node; }

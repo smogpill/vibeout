@@ -97,6 +97,7 @@ void QueueImageBarrier(const VkCommandBuffer& cmds, const VkImageMemoryBarrier& 
 Renderer::Renderer(SDL_Window& window, Game& game, bool& result)
     : _window(window)
     , _game(game)
+    , _ubo(new GlobalUniformBuffer())
 {
 	result = Init();
 }
@@ -104,7 +105,6 @@ Renderer::Renderer(SDL_Window& window, Game& game, bool& result)
 Renderer::~Renderer()
 {
     vkDeviceWaitIdle(_device);
-    delete _ubo;
 
     ShutdownPipelines();
     delete _draw;
@@ -130,6 +130,8 @@ Renderer::~Renderer()
         vkDestroySurfaceKHR(_instance, _surface, nullptr);
     if (_instance)
         vkDestroyInstance(_instance, nullptr);
+
+    delete _ubo;
 }
 
 bool Renderer::Init()
@@ -144,7 +146,7 @@ bool Renderer::Init()
     VO_TRY(InitSemaphores());
     VO_TRY(InitFences());
     VO_TRY(InitSwapChain());
-    UpdateScreenImagesSize();
+    UpdateSizes();
 
     bool result;
     _shaders = new Shaders(*this, result);
@@ -168,8 +170,6 @@ bool Renderer::Init()
 
     VO_TRY(_textures->InitImages());
     VO_TRY(InitPipelines());
-
-    _ubo = new GlobalUniformBuffer();
 
     _running = true;
 
@@ -676,7 +676,7 @@ bool Renderer::Recreate()
     ShutdownPipelines();
     _textures->ShutImages();
     ShutdownSwapChain();
-    UpdateScreenImagesSize();
+    UpdateSizes();
     VO_TRY(InitSwapChain());
     VO_TRY(_textures->InitImages());
     VO_TRY(InitPipelines());
@@ -685,11 +685,12 @@ bool Renderer::Recreate()
     return true;
 }
 
-void Renderer::UpdateScreenImagesSize()
+void Renderer::UpdateSizes()
 {
     _extentScreenImages = GetScreenImageExtent();
     _extentTAAImages.width = std::max(_extentScreenImages.width, _extentUnscaled.width);
     _extentTAAImages.height = std::max(_extentScreenImages.height, _extentUnscaled.height);
+    _game.GetCamera().SetAspectRatio((float)_extentUnscaled.width / _extentUnscaled.height);
 }
 
 void Renderer::EvaluateAASettings()
@@ -1260,7 +1261,7 @@ bool Renderer::AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* me
     return true;
 }
 
-void Renderer::OnResize()
+void Renderer::OnWindowResized()
 {
     Recreate();
 }

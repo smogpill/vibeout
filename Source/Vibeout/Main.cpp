@@ -6,6 +6,20 @@
 #include "Game/Game.h"
 #include "Render/Renderer.h"
 
+void ToggleFullscreen(SDL_Window* window)
+{
+    SDL_WindowFlags flags = SDL_GetWindowFlags(window);
+    if (flags & SDL_WINDOW_FULLSCREEN)
+    {
+        SDL_SetWindowFullscreen(window, 0);
+        //SDL_SetWindowSize(window, 1280, 720); // Reset to windowed size
+    }
+    else
+    {
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+    }
+}
+
 int main(int argc, char* argv[])
 {
     SDL_SetMainReady();
@@ -58,7 +72,10 @@ int main(int argc, char* argv[])
                 case SDL_EVENT_QUIT: running = false; break;
                 case SDL_EVENT_WINDOW_RESIZED:
                 {
-                    renderer.OnResize();
+                    int width = 1024;
+                    int height = 768;
+                    SDL_GetWindowSizeInPixels(window, &width, &height);
+                    renderer.OnWindowResized();
                     break;
                 }
                 case SDL_EVENT_WINDOW_FOCUS_GAINED:
@@ -73,8 +90,23 @@ int main(int argc, char* argv[])
                 }
                 case SDL_EVENT_KEY_DOWN:
                 {
-                    if (event.key.key == SDLK_ESCAPE)
+                    const bool* states = SDL_GetKeyboardState(nullptr);
+                    switch (event.key.key)
+                    {
+                    case SDLK_ESCAPE:
+                    {
                         SDL_SetWindowRelativeMouseMode(window, false);
+                        break;
+                    }
+                    case SDLK_RETURN:
+                    case SDLK_KP_ENTER:
+                    {
+                        if (states[SDL_SCANCODE_LALT] || states[SDL_SCANCODE_RALT])
+                            ToggleFullscreen(window);
+                        break;
+                    }
+                    }
+                       
                     break;
                 }
                 case SDL_EVENT_MOUSE_MOTION:
