@@ -41,6 +41,8 @@ public:
 	VkDeviceSize GetAvailableVideoMemory() const;
 	bool AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* memory);
 
+	void OnResize();
+
 private:
 	friend class Textures;
 	friend class Buffers;

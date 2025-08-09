@@ -6,27 +6,6 @@
 #include "Game/Game.h"
 #include "Render/Renderer.h"
 
-bool HandleEvent(const SDL_Event& event)
-{
-    switch (event.type)
-    {
-    case SDL_EVENT_QUIT: return false;
-    case SDL_EVENT_WINDOW_RESIZED: 
-    {
-        break;
-    }
-    case SDL_EVENT_WINDOW_FOCUS_GAINED:
-    {
-        break;
-    }
-    case SDL_EVENT_WINDOW_FOCUS_LOST:
-    {
-        break;
-    }
-    }
-    return true;
-}
-
 int main(int argc, char* argv[])
 {
     SDL_SetMainReady();
@@ -73,8 +52,39 @@ int main(int argc, char* argv[])
                 deltaTime = 0.05f;
 
             while (SDL_PollEvent(&event))
-                if (!HandleEvent(event))
-                    running = false;
+            {
+                switch (event.type)
+                {
+                case SDL_EVENT_QUIT: running = false; break;
+                case SDL_EVENT_WINDOW_RESIZED:
+                {
+                    renderer.OnResize();
+                    break;
+                }
+                case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                {
+                    SDL_SetWindowRelativeMouseMode(window, true);
+                    break;
+                }
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                {
+                    SDL_SetWindowRelativeMouseMode(window, false);
+                    break;
+                }
+                case SDL_EVENT_KEY_DOWN:
+                {
+                    switch(event.key.key)
+                    {
+                    case SDLK_ESCAPE: SDL_SetWindowRelativeMouseMode(window, false); break;
+                    }
+                    break;
+                }
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                    if (event.button.button == SDL_BUTTON_LEFT)
+                        SDL_SetWindowRelativeMouseMode(window, true);
+                    break;
+                }
+            }
 
             game.Update(deltaTime);
             renderer.Render();

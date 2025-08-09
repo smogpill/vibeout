@@ -1261,6 +1261,11 @@ bool Renderer::AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* me
     return true;
 }
 
+void Renderer::OnResize()
+{
+    Recreate();
+}
+
 VkExtent2D Renderer::GetScreenImageExtent() const
 {
     VkExtent2D result;
