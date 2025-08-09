@@ -929,14 +929,13 @@ bool Renderer::UpdateUBO()
     VO_ASSERT(_buffers);
     VO_ASSERT(_ubo);
 
-    Camera* camera = _game.GetCurrentCamera();
-    VO_ASSERT(camera);
+    Camera& camera = _game.GetCamera();
 
-    const glm::mat4 view = camera->GetViewMatrix();
-    const glm::mat4 proj = camera->GetProjectionMatrix();
-    const Transform& camTransform = camera->GetNode().GetGlobalTransform();
+    const glm::mat4 view = camera.GetViewMatrix();
+    const glm::mat4 proj = camera.GetProjectionMatrix();
+    const Transform& camTransform = camera.GetNode().GetGlobalTransform();
     const glm::vec3 camPos = camTransform.Translation();
-    const float verticalFOV = glm::radians(camera->GetVerticalFOV());
+    const float verticalFOV = glm::radians(camera.GetVerticalFOV());
 
     // Previous frame
     memcpy(_ubo->_prevView, _ubo->_view, sizeof(float) * 16);
@@ -964,7 +963,7 @@ bool Renderer::UpdateUBO()
     memcpy(_ubo->_invView, &invView[0].x, sizeof(float) * 16);
     memcpy(_ubo->_invProj, &invProj[0].x, sizeof(float) * 16);
     memcpy(_ubo->_camPos, &camPos.x, sizeof(float) * 3);
-    _ubo->_verticalFOV = camera->GetVerticalFOV();
+    _ubo->_verticalFOV = verticalFOV;
 
     /*
     float V_CalcFov(float fov_x, float width, float height)

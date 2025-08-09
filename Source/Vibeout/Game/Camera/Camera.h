@@ -8,14 +8,8 @@
 class Camera
 {
 public:
-	void OnFixedUpdate()
-	{
-
-	}
-	void OnUpdate()
-	{
-
-	}
+	void Rotate(float yaw, float pitch);
+	void OnUpdate(float deltaTime);
 
 	const Node& GetNode() const { return _node; }
 	glm::dmat4 GetViewMatrix() const;
@@ -24,7 +18,13 @@ public:
 	float GetVerticalFOV() const { return _verticalFOV; }
 
 private:
+	// Transform/Motion
 	Node _node;
+	float _yaw = 0.0f;
+	float _pitch = 0.0f;
+	float _roll = 0.0f;
+	float _sensitivity = 0.01f;
+
 	float _verticalFOV = 70.0f;
 	float _nearClipDist = 0.01f;
 	float _farClipDist = 10000.0f;

@@ -13,7 +13,7 @@ void Node::SetParent(Node* parent)
 {
 	if (_parent == parent)
 		return;
-	UpdateWorldTransformIfNecessary();
+	UpdateGlobalTransformIfNecessary();
 	_dirtyLocal = true;
 	if (_parent)
 	{
@@ -33,12 +33,12 @@ void Node::SetParent(Node* parent)
 void Node::SetLocalTransform(const Transform& transform)
 {
 	_localTransform = transform;
-	_dirtyWorld = true;
+	_dirtyGlobal = true;
 }
 
-void Node::SetWorldTransform(const Transform& transform)
+void Node::SetGlobalTransform(const Transform& transform)
 {
-	_worldTransform = transform;
+	_globalTransform = transform;
 	_dirtyLocal = true;
 }
 
@@ -50,8 +50,8 @@ const Transform& Node::GetLocalTransform() const
 
 const Transform& Node::GetGlobalTransform() const
 {
-	UpdateWorldTransformIfNecessary();
-	return _worldTransform;
+	UpdateGlobalTransformIfNecessary();
+	return _globalTransform;
 }
 
 void Node::UpdateLocalTransformIfNecessary() const
@@ -60,20 +60,20 @@ void Node::UpdateLocalTransformIfNecessary() const
 	{
 		_dirtyLocal = false;
 		if (_parent)
-			_localTransform = _worldTransform * Inverse(_parent->GetGlobalTransform());
+			_localTransform = _globalTransform * Inverse(_parent->GetGlobalTransform());
 		else
-			_localTransform = _worldTransform;
+			_localTransform = _globalTransform;
 	}
 }
 
-void Node::UpdateWorldTransformIfNecessary() const
+void Node::UpdateGlobalTransformIfNecessary() const
 {
-	if (_dirtyWorld)
+	if (_dirtyGlobal)
 	{
-		_dirtyWorld = false;
+		_dirtyGlobal = false;
 		if (_parent)
-			_worldTransform = _localTransform * _parent->GetGlobalTransform();
+			_globalTransform = _localTransform * _parent->GetGlobalTransform();
 		else
-			_worldTransform = _localTransform;
+			_globalTransform = _localTransform;
 	}
 }

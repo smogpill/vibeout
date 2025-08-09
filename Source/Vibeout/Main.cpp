@@ -73,10 +73,14 @@ int main(int argc, char* argv[])
                 }
                 case SDL_EVENT_KEY_DOWN:
                 {
-                    switch(event.key.key)
-                    {
-                    case SDLK_ESCAPE: SDL_SetWindowRelativeMouseMode(window, false); break;
-                    }
+                    if (event.key.key == SDLK_ESCAPE)
+                        SDL_SetWindowRelativeMouseMode(window, false);
+                    break;
+                }
+                case SDL_EVENT_MOUSE_MOTION:
+                {
+                    if (SDL_GetWindowRelativeMouseMode(window))
+                        game.OnMouseMotion(event.motion.xrel, event.motion.yrel);
                     break;
                 }
                 case SDL_EVENT_MOUSE_BUTTON_DOWN:

@@ -10,18 +10,18 @@ public:
 	~Node();
 	void SetParent(Node* parent);
 	void SetLocalTransform(const Transform& transform);
-	void SetWorldTransform(const Transform& transform);
+	void SetGlobalTransform(const Transform& transform);
 	const Transform& GetLocalTransform() const;
 	const Transform& GetGlobalTransform() const;
 private:
 	void UpdateLocalTransformIfNecessary() const;
-	void UpdateWorldTransformIfNecessary() const;
+	void UpdateGlobalTransformIfNecessary() const;
 
 	Node* _parent = nullptr;
 	Node* _firstChild = nullptr;
 	Node* _nextSibling = nullptr;
 	mutable Transform _localTransform;
-	mutable Transform _worldTransform;
-	mutable bool _dirtyWorld = false;
+	mutable Transform _globalTransform;
+	mutable bool _dirtyGlobal = false;
 	mutable bool _dirtyLocal = false;
 };

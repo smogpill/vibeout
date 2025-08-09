@@ -9,8 +9,12 @@
 const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 
 Game::Game()
+	: _camera(new Camera())
 {
-	InitCameras();
+}
+Game::~Game()
+{
+	delete _camera;
 }
 
 void Game::Update(float rawDeltaTime)
@@ -24,15 +28,15 @@ void Game::Update(float rawDeltaTime)
 		_fixedUpdateAccumulator -= s_fixedTimeStep;
 	}
 
+	_camera->OnUpdate(_deltaTime);
 	//const float interpolation = _fixedUpdateAccumulator / s_fixedTimeStep;
+}
+
+void Game::OnMouseMotion(float xrel, float yrel)
+{
+	_camera->Rotate(xrel, yrel);
 }
 
 void Game::FixedUpdate(float deltaTime)
 {
-}
-
-void Game::InitCameras()
-{
-	_defaultCamera = new Camera();
-	_currentCamera = _defaultCamera;
 }

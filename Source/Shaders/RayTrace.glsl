@@ -340,7 +340,7 @@ vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
 	float sphereRadius = 1.0f;
 
 	vec3 rayDir = normalize(ray.d);
-	vec2 ret = sphIntersect(vec3(0, 0, 0), rayDir, sphereCenter, sphereRadius);
+	vec2 ret = sphIntersect(ray.o, rayDir, sphereCenter, sphereRadius);
 	float curTMin;
 	if (ret.x > 0.0f)
 	{
