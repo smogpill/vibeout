@@ -344,10 +344,12 @@ vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
 	float curTMin;
 	if (ret.x > 0.0f)
 	{
-		curTMin = ret.x / length(ray.d);
 		//curTMin = 0.1f;
-		vec3 hit = ray.o + rayDir * curTMin;
+		vec3 hit = ray.o + rayDir * ret.x;
 		norm = normalize(hit - sphereCenter);
+		curTMin = ret.x / length(ray.d);
+		//curTMin *= length(ray.d);
+		//norm = normalize(vec3(1, 1, 1));
 	}
 	else
 	{

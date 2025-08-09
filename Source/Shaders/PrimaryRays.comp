@@ -155,12 +155,14 @@ void main()
 
 	vec3 throughput = vec3(1);
 
-	//if (hitNormal.z < -0.9f)
+	/*
+	if (hitNormal.z < -0.9f)
 	{
 		primary_base_color = vec3(0.9f, 0.15f, 0.3f);
 		primary_emissive = vec3(1) * _globalUBO._fakeEmissive;
 		//break;
 	}
+	*/
 		
 	throughput *= primary_base_color;
 
