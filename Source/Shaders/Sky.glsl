@@ -320,10 +320,8 @@ vec3 SampleSkyLight1(vec3 pos, vec3 normal)
         cosTheta * normal
     );
 
-    /*
-    if (TestObstruction(pos, normal))
+    if (TestObstruction(pos + 0.1f * sampleDir, sampleDir))
         return vec3(0, 0, 0);
-    */
 
     // Get sky color and divide by PDF (cosTheta / PI)
     return GetSkyLight(sampleDir) * (PI / max(cosTheta, 1e-5));
@@ -359,7 +357,7 @@ vec3 SampleSkyLight2(vec3 pos, vec3 normal)
     );
 
     /*
-    if (TestObstruction(pos, normal))
+    if (TestObstruction(pos + 0.1f * sampleDir, sampleDir))
         return vec3(0, 0, 0);
     */
 
@@ -382,7 +380,7 @@ vec3 SampleSkyLight3(vec3 pos, vec3 normal)
             float coneAngle = 0.05; // Controls sun sampling tightness
             vec3 sunSampleDir = RandomSunJitter(rand, sunDirection, coneAngle);
 
-            if (TestObstruction(pos, normal))
+            if (TestObstruction(pos + 0.1f, sunSampleDir))
                 return vec3(0, 0, 0);
 
             // Calculate PDF for sun sampling (directional bias)
@@ -410,7 +408,7 @@ vec3 SampleSkyLight3(vec3 pos, vec3 normal)
         cosTheta * normal
     );
 
-    if (TestObstruction(pos, normal))
+    if (TestObstruction(pos + 0.1f, sampleDir))
         return vec3(0, 0, 0);
 
     // PDF for cosine sampling (adjusted for blend)
