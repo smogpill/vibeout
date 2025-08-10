@@ -117,10 +117,6 @@ private:
 	SDL_Window& _window;
 	Game& _game;
 
-	// State
-	//----------------------------
-	bool _running = false;
-
 	// Options
 	//----------------------------
 	bool _antiAliasing = false;
@@ -130,6 +126,10 @@ private:
 	bool _wantBloom = false;
 	bool _wantToneMapping = true;
 	uint _nbBounceRays = 0;
+
+	// State
+	//----------------------------
+	bool _running = false;
 
 	// Graphics instance
 	//----------------------------

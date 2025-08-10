@@ -72,14 +72,14 @@ void main()
 			// Shadow ray
 			Ray r;
 			r.o = pos;
-			r.d = -lightDir * 10000.0f;
+			r.d = -lightDir;
+			r._maxDist = maxTraceDist;
 
-			vec3 hitNorm;
-			vec4 result = CastGlobal(r, _globalUBO._drawVoxelLevel, hitNorm);
-			if (result.x < 0)
+			CastResult result;
+			CastGlobal(r, result);
+			if (result._t >= r._maxDist)
 			{
 				const vec3 lighting = lightFactor * lightColor;
-	
 				high_freq += lighting;
 			}
 		}

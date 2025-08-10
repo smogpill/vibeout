@@ -58,6 +58,7 @@ Ray computeCameraRay(in vec2 pixelScreenCoords)
 	Ray r;
 	r.o = vec3(0, 0, 0);
 	r.d = normalize(pixel_w1 - pixel_w0);
+	r._maxDist = maxTraceDist;
 
 	vec3 o_prime = vec3(_globalUBO._invView * vec4(r.o, 1));
 	vec3 e_prime = vec3(_globalUBO._invView * vec4(r.d, 1));
@@ -75,6 +76,7 @@ Ray get_primary_ray(vec2 screen_pos)
 	ray.o = vec3(0);
 	ray.d = view_dir;
 	ray.o += _globalUBO._camPos.xyz;
+	ray._maxDist = maxTraceDist;
 
 	return ray;
 }
@@ -103,23 +105,18 @@ void main()
 
 	//Ray r = computeCameraRay(screenCoords);
 	Ray r = get_primary_ray(inUV);
-	const vec3 direction = r.d;
 	//r.o += vec3(RandomFloat01(rngState), RandomFloat01(rngState), RandomFloat01(rngState)) * 0.001f;
-	r.d *= maxDist;
 
-	vec3 hitNormal;
-	vec4 result = CastGlobal(r, _globalUBO._drawVoxelLevel, hitNormal);
+	CastResult castResult;
+	CastGlobal(r, castResult);
 
-	if (result.x < 0)
+	if (castResult._t >= r._maxDist)
 	{
-		hitNormal = vec3(0.0f);
-		result.x = 1.0f;
-
 		//vec4 transparent = alpha_blend(effects, vec4(env, 1));
 		vec4 transparent = vec4(0, 0, 0, 1);
 
 		// Compute a motion vector for the sky, because we don't want TAA to blur it
-		vec3 prev_view_dir = (_globalUBO._prevView * vec4(direction, 0)).xyz;
+		vec3 prev_view_dir = (_globalUBO._prevView * vec4(r.d, 0)).xyz;
 		vec2 prev_screen_pos;
 		float prev_distance;
 		projection_view_to_screen(prev_view_dir, prev_screen_pos, prev_distance, true);
@@ -130,8 +127,8 @@ void main()
 		imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(maxTraceDist));
 		imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(1, 1, 1, maxTraceDist));
-		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, 0));
-		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(_globalUBO._camPos.xyz + direction * maxTraceDist, 0));
+		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(r.d, 0));
+		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(_globalUBO._camPos.xyz + r.d * maxTraceDist, 0));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, 0, 0));
 		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(0));
 		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(0));
@@ -148,35 +145,26 @@ void main()
 	float primary_metallic = 0.0f;
 	float primary_roughness = 1.0f;
 	
-	const float hitDist = result.x * maxDist;
+	const float hitDist = castResult._t;
 
 	// Hack
 	primary_base_color = vec3(0.8);
-
-	vec3 throughput = vec3(1);
-
-	/*
-	if (hitNormal.z < -0.9f)
+	if (castResult._objectID == 0)
 	{
-		primary_base_color = vec3(0.9f, 0.15f, 0.3f);
-		primary_emissive = vec3(1) * _globalUBO._fakeEmissive;
-		//break;
+		primary_base_color = texture(TEX_TERRAIN_DIFFUSE, castResult._uv).rgb;
+		//primary_base_color = castResult._normal;
 	}
-	*/
-		
-	throughput *= primary_base_color;
 
-	if (result.x >= 1.0f)
-		throughput = vec3(0.0f);
+	vec3 throughput = primary_base_color;
 
-	vec3 hitPos = r.o + r.d * result.x;
+	vec3 hitPos = r.o + r.d * castResult._t;
 
 	// Compute view-space derivatives of depth and motion vectors
 	//Ray ray_0 = r;
 	Ray ray_x = get_primary_ray(inUV + vec2(1.0 / float(_globalUBO._width), 0));
 	Ray ray_y = get_primary_ray(inUV + vec2(0, 1.0 / float(_globalUBO._height)));
 
-	float half_cone_angle = sqrt(max(0.0, 1.0 - square(min(dot(direction, ray_x.d), dot(direction, ray_y.d))))); // Max is for safety
+	float half_cone_angle = sqrt(max(0.0, 1.0 - square(min(dot(r.d, ray_x.d), dot(r.d, ray_y.d))))); // Max is for safety
 
 	float fwidth_depth = 0.0f;
 
@@ -199,10 +187,10 @@ void main()
 
 	imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(distance_curr));
 	imageStore(IMG_PT_MOTION, ipos, vec4(motion, fwidth_depth));
-	imageStore(IMG_PT_NORMAL_A, ipos, uvec4(encode_normal(hitNormal)));
-	imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(encode_normal(hitNormal)));
+	imageStore(IMG_PT_NORMAL_A, ipos, uvec4(encode_normal(castResult._normal)));
+	imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(encode_normal(castResult._normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(hitPos.xyz, uintBitsToFloat(materialID)));
-	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
+	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(r.d, float(checkerboard_flags)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, distance_curr));
 	imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1, 1, 1, half_cone_angle));
 	//imageStore(IMG_PT_CLUSTER_A, ipos, ivec4(triangle.cluster));

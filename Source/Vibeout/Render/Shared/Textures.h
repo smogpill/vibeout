@@ -37,6 +37,7 @@ private:
 	bool InitInvalidTexture();
 	bool InitBlueNoise();
 	bool InitHeightmap();
+	bool InitTerrainDiffuse();
 	bool InitSamplers();
 	void InvalidateTextureDescriptors();
 
@@ -64,15 +65,21 @@ private:
 	VkImageView      tex_image_views[MAX_RIMAGES] = {};
 	VkImageView      tex_image_views_mip0[MAX_RIMAGES] = {};
 	VkDeviceMemory   mem_blue_noise = nullptr;
-	VkDeviceMemory   mem_heightmap = nullptr;
 	VkDeviceMemory   mem_envmap = nullptr;
 	VkImage          img_blue_noise = nullptr;
 	VkImageView      imv_blue_noise = nullptr;
-	VkImage _img_heightmap = nullptr;
-	VkImageView _imv_heightmap = nullptr;
+	
 	VkImage          img_envmap = nullptr;
 	VkImageView      imv_envmap = nullptr;
 	VkDescriptorPool desc_pool_textures = nullptr;
+
+	VkDeviceMemory   _mem_heightmap = nullptr;
+	VkImage			_img_heightmap = nullptr;
+	VkImageView		_imv_heightmap = nullptr;
+
+	VkDeviceMemory   _mem_terrainDiffuse = nullptr;
+	VkImage			_img_terrainDiffuse = nullptr;
+	VkImageView		_imv_terrainDiffuse = nullptr;
 
 	VkImage          tex_invalid_texture_image = nullptr;
 	VkImageView      tex_invalid_texture_image_view = nullptr;

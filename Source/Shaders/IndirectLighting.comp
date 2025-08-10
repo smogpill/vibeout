@@ -199,7 +199,8 @@ void main()
 
 	Ray r;
 	r.o = position;
-	r.d = bounce_direction * maxDist;
+	r.d = bounce_direction;
+	r._maxDist = maxTraceDist;
 
 	//r.o -= view_direction.xyz * 0.01;
 	r.o += geo_normal.xyz * 0.01f;
@@ -213,14 +214,14 @@ void main()
 	//imageStore(IMG_TAA_OUTPUT, ipos, vec4(1, 0, 0, 1));
 	//return;
 
-	vec3 hitNormal;
-	vec4 result = CastGlobal(r, _globalUBO._maxIndirectLightingVoxelLevel, hitNormal);
+	CastResult result;
+	CastGlobal(r, result);
 
 	
 	//imageStore(IMG_TAA_OUTPUT, ipos, vec4(1, 0, 0, 1));
 	//return;
 	
-	if (result.x < 0)
+	if (result._t >= r._maxDist)
 	{
 		if (!isLastBounce)
 			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(0));
@@ -232,7 +233,7 @@ void main()
 	//imageStore(IMG_TAA_OUTPUT, ipos, vec4(1, 0, 0, 1));
 	//return;
 	
-	const float hitDist = result.x * maxDist;
+	const float hitDist = result._t;
 
 	float indirect_specular_weight = 1;
 
@@ -243,17 +244,19 @@ void main()
 		indirect_specular_weight /= max(1, cone_size * _globalUBO.pt_specular_anti_flicker * 0.01);
 	}
 
-	vec3 bounce_geo_normal = hitNormal;
+	vec3 bounce_geo_normal = result._normal;
 	vec3 bounce_normal  = bounce_geo_normal;
 	vec3 bounce_base_color = vec3(0.8);
 
 	// HACK
-	if (hitNormal.z < -0.9f)
+	/*
+	if (result._normal.z < -0.9f)
 	{
 		bounce_base_color = vec3(0.9f, 0.15f, 0.3f);
 		vec3 emissive = bounce_base_color * _globalUBO._fakeEmissive;
 		bounce_contrib += emissive * bounce_throughput * indirect_specular_weight;
 	}
+	*/
 
 	if (dot(bounce_direction, bounce_normal) > 0)
 		bounce_normal = -bounce_normal;
@@ -278,7 +281,7 @@ void main()
 		bounce_throughput *= 1.0f / p;
 	}
 	
-	vec3 bounce_position = r.o + r.d * result.x;
+	vec3 bounce_position = r.o + r.d * result._t;
 	uint bounce_materialID = 1;
 
 	// HACK
@@ -286,9 +289,9 @@ void main()
 	{
 		imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, hitDist));
-		if (hitNormal.z < -0.9f)
+		/*if (result._normal.z < -0.9f)
 			imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1.0f));
-		else
+		else*/
 			imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(0.0f));
 	}
 
