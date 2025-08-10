@@ -4,7 +4,7 @@
 
 const float maxTraceDist = 1e6f;
 const float terrainSize = 10.0f;
-const float terrainHeightScale = 0.4f;
+const float terrainHeightScale = 0.8f;
 
 struct Ray
 {

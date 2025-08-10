@@ -24,6 +24,7 @@
 #include "RayTrace.glsl"
 #include "PTRayGen.h"
 #include "Projection.glsl"
+#include "Sky.glsl"
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
@@ -112,15 +113,17 @@ void main()
 
 	if (castResult._t >= r._maxDist)
 	{
-		//vec4 transparent = alpha_blend(effects, vec4(env, 1));
-		vec4 transparent = vec4(0, 0, 0, 1);
-
 		// Compute a motion vector for the sky, because we don't want TAA to blur it
 		vec3 prev_view_dir = (_globalUBO._prevView * vec4(r.d, 0)).xyz;
 		vec2 prev_screen_pos;
 		float prev_distance;
 		projection_view_to_screen(prev_view_dir, prev_screen_pos, prev_distance, true);
 		vec2 motion = prev_screen_pos - inUV;
+
+		vec3 skyColor = max(vec3(0), GetSkyColor(r.d) * 1500);
+
+		//vec4 transparent = alpha_blend(effects, vec4(env, 1));
+		vec4 color = vec4(skyColor, 1);
 
 		// Store an empty surface into the G-buffer
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
@@ -133,7 +136,7 @@ void main()
 		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(0));
 		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(0));
 		imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(0));
-		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
+		imageStore(IMG_PT_TRANSPARENT, ipos, color);
 		return;
 	}
 
