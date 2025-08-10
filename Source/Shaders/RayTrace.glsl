@@ -315,7 +315,7 @@ vec4 CastLocal(in Ray ray, uint voxelPtr, in uint drawDepth, out vec3 norm)
 }
 #endif
 
-float CastSphere(in vec3 ro, in vec3 rd, in vec3 ce, float ra)
+float CastSphere(in vec3 ro, in vec3 rd, in vec3 ce, float ra, out vec3 normal)
 {
 	vec3 oc = ro - ce;
 	float b = dot(oc, rd);
@@ -323,10 +323,17 @@ float CastSphere(in vec3 ro, in vec3 rd, in vec3 ce, float ra)
 	float h = b * b - c;
 	if (h < 0.0) return -1.0; // no intersection
 	h = sqrt(h);
-	return -b - h;
+	const float t = -b - h;
+	normal = normalize(ro + rd * t - ce);
+	return t;
 }
 
-vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
+float CastTerrain(in vec3 ro, in vec3 rd, out vec3 normal)
+{
+	return -1.0f;
+}
+
+vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 normal)
 {
 	//if (ray.d.x > 0.0f)
 	//	return vec4(0.1f, 0, 0, 0);
@@ -340,13 +347,11 @@ vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
 	float sphereRadius = 1.0f;
 
 	vec3 rayDir = normalize(ray.d);
-	float t = CastSphere(ray.o, rayDir, sphereCenter, sphereRadius);
+	float t = CastSphere(ray.o, rayDir, sphereCenter, sphereRadius, normal);
 	float curTMin;
 	if (t > 0.0f)
 	{
 		//curTMin = 0.1f;
-		vec3 hit = ray.o + rayDir * t;
-		norm = normalize(hit - sphereCenter);
 		curTMin = t / length(ray.d);
 		//curTMin *= length(ray.d);
 		//norm = normalize(vec3(1, 1, 1));
