@@ -12,9 +12,24 @@ const float H_M = 1.2e3;               // Mie scale height
 const float G = 0.76;                  // Mie scattering asymmetry factor
 
 // Sun parameters
-vec3 sunDirection = normalize(vec3(0, 1, 0));
-float sunIntensity = 15.0; // typically between 1 and 20
+vec3 sunDirection = normalize(vec3(0, 0.5, 1));
+float sunIntensity = 20.0; // typically between 1 and 20
 float turbidity = 3.0f;
+
+vec3 randomUnitVector(vec2 rand)
+{
+    float y = rand.y * 2.0 - 1.0;
+    float r = sqrt(1.0 - y * y);
+    float phi = 2.0 * PI * rand.x;
+    return vec3(r * cos(phi), y, r * sin(phi));
+}
+
+float calculateSunPDF(vec3 sampleDir, vec3 sunDir, float coneAngle)
+{
+    float cosTheta = dot(sampleDir, sunDir);
+    float sigma = coneAngle * coneAngle;
+    return exp(-(1.0 - cosTheta) / sigma) / (2.0 * PI * sigma);
+}
 
 vec2 hash2(uvec2 xy)
 {
@@ -190,7 +205,8 @@ vec3 GetSkyColor(vec3 dir)
     {
         vec3 groundAlbedo = vec3(0.3);
         color = groundAlbedo * (color + vec3(sun) * 0.1);
-    }*/
+    }
+    */
 
     return color;
 }
@@ -237,7 +253,7 @@ vec3 GetSkyLight(vec3 dir)
     return vec3(luminance);
 }
 
-vec3 SampleSkyLight(vec3 pos, vec3 normal)
+vec3 SampleSkyLight0(vec3 pos, vec3 normal)
 {
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
     int texnum = _globalUBO._currentFrameIdx;
@@ -275,4 +291,98 @@ vec3 SampleSkyLight(vec3 pos, vec3 normal)
 
     // Get sky color and divide by PDF (cosTheta / PI)
     return GetSkyLight(sampleDir) * (PI / max(cosTheta, 1e-5));
+}
+
+vec2 GetRand2()
+{
+    ivec2 ipos = ivec2(gl_GlobalInvocationID);
+    int texnum = _globalUBO._currentFrameIdx;
+    ivec2 texpos = ipos & ivec2(BLUE_NOISE_RES - 1);
+    float jitter_x = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, (texnum + 0) & (NUM_BLUE_NOISE_TEX - 1)), 0).r;
+    float jitter_y = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, (texnum + 1) & (NUM_BLUE_NOISE_TEX - 1)), 0).r;
+    return vec2(jitter_x, jitter_y);
+}
+
+vec3 SampleSkyLight1(vec3 pos, vec3 normal)
+{
+    vec2 rand = GetRand2();
+
+    float phi = 2.0 * PI * rand.x;
+    float cosTheta = sqrt(rand.y);  // Importance sampling for cosine
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    // Build orthonormal basis around normal
+    vec3 tangent = normalize(cross(normal, vec3(1.0, 0.0, 0.0)));
+    vec3 bitangent = cross(normal, tangent);
+    vec3 sampleDir = normalize(
+        sinTheta * cos(phi) * tangent +
+        sinTheta * sin(phi) * bitangent +
+        cosTheta * normal
+    );
+
+    /*
+    // Shadow ray
+    Ray r;
+    r.o = pos;
+    r.d = sampleDir;
+    r._maxDist = maxTraceDist;
+
+    CastResult result;
+    CastGlobal(r, result);
+    if (result._t < r._maxDist)
+    {
+        return vec3(0, 0, 0);
+    }*/
+
+    // Get sky color and divide by PDF (cosTheta / PI)
+    return GetSkyLight(sampleDir) * (PI / max(cosTheta, 1e-5));
+}
+
+vec3 RandomSunJitter(vec2 rand, vec3 sunDir, float coneAngle)
+{
+    vec3 tangent = normalize(cross(sunDir, vec3(0, 1, 0)));
+    vec3 bitangent = cross(sunDir, tangent);
+    float r = sqrt(rand.x) * coneAngle;
+    float phi = 2.0 * PI * rand.y;
+    return normalize(sunDir + r * (cos(phi) * tangent + sin(phi) * bitangent));
+}
+
+vec3 SampleSkyLight(vec3 pos, vec3 normal)
+{
+    vec2 rand = GetRand2();
+
+    // --- 1. Blend between sun direction and cosine sampling ---
+    float sunWeight = 0.5; // 50% chance to sample toward sun (adjust as needed)
+    bool sampleSun = (rand.x < sunWeight);
+    if (sampleSun)
+    {
+        if (dot(normal, sunDirection) > 0.0f)
+        {
+            // --- 2. Importance sample near sun direction ---
+            float coneAngle = 0.05; // Controls sun sampling tightness
+            vec3 sunSampleDir = RandomSunJitter(rand, sunDirection, coneAngle);
+
+            // Calculate PDF for sun sampling (directional bias)
+            float sunPdf = sunWeight * calculateSunPDF(sunSampleDir, sunDirection, coneAngle);
+            return GetSkyLight(sunSampleDir) / max(sunPdf, 1e-5);
+        }
+    }
+
+    // --- 3. Fallback to cosine-weighted sampling ---
+    float phi = 2.0 * PI * rand.y;
+    float cosTheta = sqrt(1.0 - rand.y); // Cosine-weighted
+    float sinTheta = sqrt(rand.y);
+
+    // Build orthonormal basis around normal (Y-up)
+    vec3 tangent = normalize(cross(normal, vec3(1.0, 0.0, 0.0)));
+    vec3 bitangent = cross(normal, tangent);
+    vec3 sampleDir = normalize(
+        sinTheta * cos(phi) * tangent +
+        sinTheta * sin(phi) * bitangent +
+        cosTheta * normal
+    );
+
+    // PDF for cosine sampling (adjusted for blend)
+    float pdf = (1.0 - sunWeight) * (cosTheta / PI);
+    return GetSkyLight(sampleDir) / max(pdf, 1e-5);
 }

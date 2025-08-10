@@ -125,7 +125,7 @@ private:
 	bool _wantDenoising = false;
 	bool _wantBloom = false;
 	bool _wantToneMapping = true;
-	uint _nbBounceRays = 1;
+	uint _nbBounceRays = 0;
 
 	// State
 	//----------------------------

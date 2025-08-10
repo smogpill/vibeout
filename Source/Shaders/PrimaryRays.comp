@@ -154,7 +154,7 @@ void main()
 	primary_base_color = vec3(0.8);
 	if (castResult._objectID == 0)
 	{
-		primary_base_color = texture(TEX_TERRAIN_DIFFUSE, castResult._uv).rgb;
+		//primary_base_color = texture(TEX_TERRAIN_DIFFUSE, castResult._uv).rgb;
 		//primary_base_color = castResult._normal;
 	}
 
