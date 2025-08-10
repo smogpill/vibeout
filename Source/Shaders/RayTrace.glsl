@@ -6,7 +6,7 @@ const int maxLevels = 23;
 const float maxTraceDist = 1e6f;
 const float rootHalfSide = 32.0f;
 const float terrainSize = 10.0f;
-const float terrainHeightScale = 0.2f;
+const float terrainHeightScale = 0.4f;
 const uint levelNodeOffsets[] = { 0, 1, 9, 73, 585, 4681, 37449, 299593, 2396745, 19173961/*, 153391689*/ };
 
 // Counts amount of bits in 8 bit int
@@ -326,18 +326,24 @@ float CastSphere(in vec3 ro, in vec3 rd, in vec3 ce, float ra, out vec3 normal)
 	if (h < 0.0) return maxTraceDist; // no intersection
 	h = sqrt(h);
 	const float t = -b - h;
+	if (t < 0.0f)
+		return maxTraceDist;
 	normal = normalize(ro + rd * t - ce);
 	return t;
 }
 
-vec3 ComputeNormal(vec2 uv)
+vec3 ComputeTerrainNormal(vec2 uv)
 {
-	const float dt = 0.001f;
-	float hL = texture(TEX_HEIGHTMAP, uv - (dt, 0)).r;
-	float hR = texture(TEX_HEIGHTMAP, uv + (dt, 0)).r;
-	float hU = texture(TEX_HEIGHTMAP, uv - (0, dt)).r;
-	float hD = texture(TEX_HEIGHTMAP, uv + (0, dt)).r;
-	return normalize(vec3((hL - hR) * terrainHeightScale, (hU - hD) * terrainHeightScale, 2.0));
+	const vec2 texelSize = 1.0 / vec2(textureSize(TEX_HEIGHTMAP, 0));
+	float hL = texture(TEX_HEIGHTMAP, uv - (texelSize.x, 0)).r;
+	float hR = texture(TEX_HEIGHTMAP, uv + (texelSize.x, 0)).r;
+	float hU = texture(TEX_HEIGHTMAP, uv - (0, texelSize.y)).r;
+	float hD = texture(TEX_HEIGHTMAP, uv + (0, texelSize.y)).r;
+	float dHdU = (hR - hL) * terrainHeightScale;
+	float dHdV = (hU - hD) * terrainHeightScale;
+	vec3 tangent = normalize(vec3(2.0 * texelSize.x, 0.0, dHdU));
+	vec3 bitangent = normalize(vec3(0.0, 2.0 * texelSize.y, dHdV));
+	return normalize(cross(tangent, bitangent));
 }
 
 // Returns true if ray intersects AABB, with tMin and tMax as entry/exit distances
@@ -364,7 +370,7 @@ bool RayAABBIntersection(vec3 rayOrigin, vec3 rayDir, vec3 aabbMin, vec3 aabbMax
 
 float CastTerrain(in vec3 rayOrigin, in vec3 rayDir, out vec3 normal)
 {
-	float initialStepSize = 0.001f;
+	float initialStepSize = 0.0001f;
 	float maxDist = 100.0f;
 	vec3 localTerrainOrigin = vec3(-0.5f, 0.0f, -0.5f);
 	vec3 localOrigin = rayOrigin / terrainSize - localTerrainOrigin;
@@ -423,7 +429,7 @@ float CastTerrain(in vec3 rayOrigin, in vec3 rayDir, out vec3 normal)
 	// Final position and normal
 	vec3 hitPos = localOrigin + localDir * t;
 	vec2 uv = clamp(hitPos.xz, 0.0, 1.0);
-	normal = ComputeNormal(uv);
+	normal = ComputeTerrainNormal(uv);
 
 	return t * terrainSize;
 }
