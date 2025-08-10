@@ -9,6 +9,7 @@ class Camera
 {
 public:
 	void Rotate(float yaw, float pitch);
+	void SetTranslation(const glm::dvec3& pos);
 	void SetAspectRatio(float aspectRatio);
 	void OnUpdate(float deltaTime);
 

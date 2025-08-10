@@ -315,15 +315,15 @@ vec4 CastLocal(in Ray ray, uint voxelPtr, in uint drawDepth, out vec3 norm)
 }
 #endif
 
-vec2 sphIntersect(in vec3 ro, in vec3 rd, in vec3 ce, float ra)
+float CastSphere(in vec3 ro, in vec3 rd, in vec3 ce, float ra)
 {
 	vec3 oc = ro - ce;
 	float b = dot(oc, rd);
 	float c = dot(oc, oc) - ra * ra;
 	float h = b * b - c;
-	if (h < 0.0) return vec2(-1.0); // no intersection
+	if (h < 0.0) return -1.0; // no intersection
 	h = sqrt(h);
-	return vec2(-b - h, -b + h);
+	return -b - h;
 }
 
 vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
@@ -340,14 +340,14 @@ vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 norm)
 	float sphereRadius = 1.0f;
 
 	vec3 rayDir = normalize(ray.d);
-	vec2 ret = sphIntersect(ray.o, rayDir, sphereCenter, sphereRadius);
+	float t = CastSphere(ray.o, rayDir, sphereCenter, sphereRadius);
 	float curTMin;
-	if (ret.x > 0.0f)
+	if (t > 0.0f)
 	{
 		//curTMin = 0.1f;
-		vec3 hit = ray.o + rayDir * ret.x;
+		vec3 hit = ray.o + rayDir * t;
 		norm = normalize(hit - sphereCenter);
-		curTMin = ret.x / length(ray.d);
+		curTMin = t / length(ray.d);
 		//curTMin *= length(ray.d);
 		//norm = normalize(vec3(1, 1, 1));
 	}

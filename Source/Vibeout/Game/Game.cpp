@@ -11,6 +11,8 @@ const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 Game::Game()
 	: _camera(new Camera())
 {
+	// Spawn pos
+	_camera->SetTranslation(glm::dvec3(0, 2, 0));
 }
 Game::~Game()
 {

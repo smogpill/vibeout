@@ -12,6 +12,13 @@ void Camera::Rotate(float yaw, float pitch)
     _pitch = glm::clamp(_pitch, -pitchLimit, pitchLimit);
 }
 
+void Camera::SetTranslation(const glm::dvec3& pos)
+{
+    Transform transform = _node.GetGlobalTransform();
+    transform.Translation() = pos;
+    return _node.SetGlobalTransform(transform);
+}
+
 void Camera::SetAspectRatio(float aspectRatio)
 {
     _aspectRatio = aspectRatio;
