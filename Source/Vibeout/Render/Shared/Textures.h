@@ -18,8 +18,8 @@ public:
 	Textures(Renderer& renderer, bool& result);
 	~Textures();
 
-	bool InitImages();
-	void ShutImages();
+	bool InitFramebufferImages();
+	void ShutdownFramebufferImages();
 	void QueueImageBarrier(VkCommandBuffer commands, ImageID imageID, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask);
 
 	const VkImage& GetImage(ImageID imageID) const;
@@ -36,6 +36,7 @@ private:
 	bool Init();
 	bool InitInvalidTexture();
 	bool InitBlueNoise();
+	bool InitHeightmap();
 	bool InitSamplers();
 	void InvalidateTextureDescriptors();
 
@@ -63,9 +64,12 @@ private:
 	VkImageView      tex_image_views[MAX_RIMAGES] = {};
 	VkImageView      tex_image_views_mip0[MAX_RIMAGES] = {};
 	VkDeviceMemory   mem_blue_noise = nullptr;
+	VkDeviceMemory   mem_heightmap = nullptr;
 	VkDeviceMemory   mem_envmap = nullptr;
 	VkImage          img_blue_noise = nullptr;
 	VkImageView      imv_blue_noise = nullptr;
+	VkImage _img_heightmap = nullptr;
+	VkImageView _imv_heightmap = nullptr;
 	VkImage          img_envmap = nullptr;
 	VkImageView      imv_envmap = nullptr;
 	VkDescriptorPool desc_pool_textures = nullptr;

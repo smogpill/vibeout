@@ -168,7 +168,7 @@ bool Renderer::Init()
     _draw = new Draw(*this, result);
     VO_TRY(result);
 
-    VO_TRY(_textures->InitImages());
+    VO_TRY(_textures->InitFramebufferImages());
     VO_TRY(InitPipelines());
 
     _running = true;
@@ -674,11 +674,11 @@ bool Renderer::Recreate()
     vkDeviceWaitIdle(_device);
     _running = false;
     ShutdownPipelines();
-    _textures->ShutImages();
+    _textures->ShutdownFramebufferImages();
     ShutdownSwapChain();
     UpdateSizes();
     VO_TRY(InitSwapChain());
-    VO_TRY(_textures->InitImages());
+    VO_TRY(_textures->InitFramebufferImages());
     VO_TRY(InitPipelines());
     _waitForIdleFrames = maxFramesInFlight * 2;
     _running = true;

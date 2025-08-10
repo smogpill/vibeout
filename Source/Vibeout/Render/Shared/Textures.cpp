@@ -79,6 +79,12 @@ bool Textures::Init()
 			.descriptorCount = 1,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
+		{
+			.binding = BINDING_OFFSET_HEIGHTMAP,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = 1,
+			.stageFlags = VK_SHADER_STAGE_ALL,
+		},
 	};
 
 	VkDescriptorSetLayoutCreateInfo layout_info = {
@@ -125,6 +131,7 @@ bool Textures::Init()
 	//SET_VK_NAME(desc_set_textures_odd, "Odd");
 
 	VO_TRY(InitBlueNoise());
+	VO_TRY(InitHeightmap());
 
 	return true;
 }
@@ -241,7 +248,7 @@ bool Textures::InitBlueNoise()
 		int w, h, n;
 		char buf[1024];
 
-		snprintf(buf, sizeof buf, "Assets/Textures/Functions/BlueNoise/%d_%d/HDR_RGBA_%04d.png", res, res, i);
+		snprintf(buf, sizeof buf, "Assets/BlueNoise/%d_%d/HDR_RGBA_%04d.png", res, res, i);
 
 		//coByte* filedata = 0;
 		uint16_t* data = 0;
@@ -407,6 +414,174 @@ bool Textures::InitBlueNoise()
 	return true;
 }
 
+bool Textures::InitHeightmap()
+{
+	const VkDevice device = _renderer.GetDevice();
+	VO_TRY(device);
+
+	int width, height, nbComponents;
+
+	const char* filePath = "Assets/Terrains/Rugged/Heightmap.png";
+
+	uint16_t* data = stbi_load_16(filePath, &width, &height, &nbComponents, 1);
+	VO_TRY(data, "error loading heightmap tex {}\n", filePath);
+
+	size_t img_size = width * height;
+	size_t total_size = img_size * sizeof(uint16_t);
+
+	Buffer::Setup buf_img_upload_setup;
+	buf_img_upload_setup._size = total_size;
+	buf_img_upload_setup._usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	buf_img_upload_setup._memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	bool result;
+	Buffer buf_img_upload(_renderer, buf_img_upload_setup, result);
+	VO_TRY(result);
+
+	uint16_t* bn_tex = (uint16_t*)buf_img_upload.Map();
+
+	for (int j = 0; j < img_size; j++)
+		bn_tex[j] = data[j * nbComponents + 0];
+
+	stbi_image_free(data);
+
+
+	buf_img_upload.Unmap();
+	bn_tex = nullptr;
+
+	VkImageCreateInfo img_info =
+	{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.imageType = VK_IMAGE_TYPE_2D,
+		.format = VK_FORMAT_R16_UNORM,
+		.extent = {
+			.width = (uint32)width,
+			.height = (uint32)height,
+			.depth = 1,
+		},
+		.mipLevels = 1,
+		.arrayLayers = 1,
+		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.usage = VK_IMAGE_USAGE_STORAGE_BIT
+							   | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+							   | VK_IMAGE_USAGE_SAMPLED_BIT,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	};
+
+	VO_TRY_VK(vkCreateImage(device, &img_info, nullptr, &_img_heightmap));
+	_renderer.SetObjectName(_img_heightmap, "Heightmap");
+
+	VkMemoryRequirements mem_req;
+	vkGetImageMemoryRequirements(device, _img_heightmap, &mem_req);
+	VO_ASSERT(mem_req.size >= buf_img_upload.GetSize());
+
+	VO_TRY(_renderer.AllocateGPUMemory(mem_req, &mem_heightmap));
+
+	VO_TRY_VK(vkBindImageMemory(device, _img_heightmap, mem_heightmap, 0));
+
+	VkImageViewCreateInfo img_view_info =
+	{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.image = _img_heightmap,
+		.viewType = VK_IMAGE_VIEW_TYPE_2D,
+		.format = VK_FORMAT_R16_UNORM,
+		.components = {
+			VK_COMPONENT_SWIZZLE_R,
+			VK_COMPONENT_SWIZZLE_R,
+			VK_COMPONENT_SWIZZLE_R,
+			VK_COMPONENT_SWIZZLE_R,
+		},
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		},
+	};
+	VO_TRY_VK(vkCreateImageView(device, &img_view_info, nullptr, &_imv_heightmap));
+	_renderer.SetObjectName(_imv_heightmap, "Heightmap");
+
+	VkCommandBuffer cmd_buf = _renderer.BeginCommandBuffer(_renderer._graphicsCommandBuffers);
+
+	VkImageSubresourceRange subresource_range = 
+	{
+		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		.baseMipLevel = 0,
+		.levelCount = 1,
+		.baseArrayLayer = 0,
+		.layerCount = 1,
+	};
+
+	{
+		VkImageMemoryBarrier barrier = IMAGE_BARRIER();
+		barrier.image = _img_heightmap;
+		barrier.subresourceRange = subresource_range;
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		QUEUE_IMAGE_BARRIER(cmd_buf, barrier);
+	}
+
+	VkBufferImageCopy cpy_info =
+	{
+		.bufferOffset = 0,
+		.imageSubresource =
+		{
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.mipLevel = 0,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		},
+		.imageOffset = { 0, 0, 0 },
+		.imageExtent = { (uint32)width, (uint32)height, 1 }
+	};
+	vkCmdCopyBufferToImage(cmd_buf, buf_img_upload.GetBuffer(), _img_heightmap,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cpy_info);
+
+	{
+		VkImageMemoryBarrier barrier = IMAGE_BARRIER();
+		barrier.image = _img_heightmap;
+		barrier.subresourceRange = subresource_range;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		QUEUE_IMAGE_BARRIER(cmd_buf, barrier);
+	}
+
+	VO_TRY(_renderer.SubmitCommandBufferSimple(cmd_buf, _renderer._graphicsQueue));
+
+	VkDescriptorImageInfo desc_img_info =
+	{
+		.sampler = tex_sampler,
+		.imageView = _imv_heightmap,
+		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	};
+
+	VkWriteDescriptorSet s =
+	{
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = desc_set_textures_even,
+		.dstBinding = BINDING_OFFSET_HEIGHTMAP,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.pImageInfo = &desc_img_info,
+	};
+
+	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
+
+	s.dstSet = desc_set_textures_odd;
+	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
+
+	vkQueueWaitIdle(_renderer._graphicsQueue);
+
+	return true;
+}
+
 bool Textures::InitSamplers()
 {
 	const VkDevice device = _renderer.GetDevice();
@@ -511,7 +686,7 @@ bool Textures::InitSamplers()
 	return true;
 }
 
-bool Textures::InitImages()
+bool Textures::InitFramebufferImages()
 {
 	const VkDevice device = _renderer.GetDevice();
 	VO_TRY(device);
@@ -716,7 +891,7 @@ bool Textures::InitImages()
 	return true;
 }
 
-void Textures::ShutImages()
+void Textures::ShutdownFramebufferImages()
 {
 	const VkDevice device = _renderer.GetDevice();
 
