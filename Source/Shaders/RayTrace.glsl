@@ -157,3 +157,15 @@ void CastGlobal(in Ray ray, inout CastResult result)
 	CastSphere(ray, sphereCenter, sphereRadius, result);
 	CastTerrain(ray, result);
 }
+
+bool TestObstruction(vec3 pos, vec3 dir)
+{
+	Ray r;
+	r.o = pos;
+	r.d = dir;
+	r._maxDist = maxTraceDist;
+
+	CastResult result;
+	CastGlobal(r, result);
+	return result._t < r._maxDist;
+}

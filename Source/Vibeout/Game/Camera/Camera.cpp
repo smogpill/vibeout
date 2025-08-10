@@ -36,7 +36,10 @@ void Camera::OnUpdate(float deltaTime)
     if (keys[SDL_SCANCODE_D]) localMoveIntent[0] += 1.0f;
     const glm::mat3 globalRotMat = glm::mat4(global.To_dmat4());
     const glm::vec3 globalMoveIntent = globalRotMat * localMoveIntent;
-    pos += globalMoveIntent * 0.01f;
+    const bool turbo = keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
+    const float speed = turbo ? 10.0f : 2.0f;
+    pos += globalMoveIntent * speed * deltaTime;
+
 
     global.Rotation() = glm::quat(glm::vec3(_pitch, _yaw, 0.0f));
     _node.SetGlobalTransform(global);
