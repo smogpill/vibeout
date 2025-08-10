@@ -209,7 +209,7 @@ layout(
 layout(
 	set = GLOBAL_TEXTURES_DESC_SET_IDX,
 	binding = BINDING_OFFSET_HEIGHTMAP
-) uniform sampler2DArray TEX_HEIGHTMAP;
+) uniform sampler2D TEX_HEIGHTMAP;
 
 /*
 layout(

@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 const int maxLevels = 23;
-const float maxTraceDist = 1e5f;
+const float maxTraceDist = 1e6f;
 const float rootHalfSide = 32.0f;
+const float terrainSize = 10.0f;
+const float terrainHeightScale = 0.2f;
 const uint levelNodeOffsets[] = { 0, 1, 9, 73, 585, 4681, 37449, 299593, 2396745, 19173961/*, 153391689*/ };
 
 // Counts amount of bits in 8 bit int
@@ -321,16 +323,109 @@ float CastSphere(in vec3 ro, in vec3 rd, in vec3 ce, float ra, out vec3 normal)
 	float b = dot(oc, rd);
 	float c = dot(oc, oc) - ra * ra;
 	float h = b * b - c;
-	if (h < 0.0) return -1.0; // no intersection
+	if (h < 0.0) return maxTraceDist; // no intersection
 	h = sqrt(h);
 	const float t = -b - h;
 	normal = normalize(ro + rd * t - ce);
 	return t;
 }
 
-float CastTerrain(in vec3 ro, in vec3 rd, out vec3 normal)
+vec3 ComputeNormal(vec2 uv)
 {
-	return -1.0f;
+	const float dt = 0.001f;
+	float hL = texture(TEX_HEIGHTMAP, uv - (dt, 0)).r;
+	float hR = texture(TEX_HEIGHTMAP, uv + (dt, 0)).r;
+	float hU = texture(TEX_HEIGHTMAP, uv - (0, dt)).r;
+	float hD = texture(TEX_HEIGHTMAP, uv + (0, dt)).r;
+	return normalize(vec3((hL - hR) * terrainHeightScale, (hU - hD) * terrainHeightScale, 2.0));
+}
+
+// Returns true if ray intersects AABB, with tMin and tMax as entry/exit distances
+bool RayAABBIntersection(vec3 rayOrigin, vec3 rayDir, vec3 aabbMin, vec3 aabbMax, out float tMin, out float tMax)
+{
+	// Inverse direction avoids division and handles infinity correctly
+	vec3 invDir = 1.0 / rayDir;
+
+	// Calculate intersections with AABB planes
+	vec3 t0 = (aabbMin - rayOrigin) * invDir;
+	vec3 t1 = (aabbMax - rayOrigin) * invDir;
+
+	// Ensure t0 holds near intersections, t1 holds far intersections
+	vec3 tNear = min(t0, t1);
+	vec3 tFar = max(t0, t1);
+
+	// Find the farthest near and nearest far points
+	tMin = max(max(tNear.x, tNear.y), tNear.z);
+	tMax = min(min(tFar.x, tFar.y), tFar.z);
+
+	// Check if the ray misses the AABB entirely
+	return tMin <= tMax && tMax >= 0.0;
+}
+
+float CastTerrain(in vec3 rayOrigin, in vec3 rayDir, out vec3 normal)
+{
+	float initialStepSize = 0.001f;
+	float maxDist = 100.0f;
+	vec3 localTerrainOrigin = vec3(-0.5f, 0.0f, -0.5f);
+	vec3 localOrigin = rayOrigin / terrainSize - localTerrainOrigin;
+	vec3 localDir = rayDir;
+	float localMaxDist = maxDist / terrainSize;
+
+	// Compute intersection with the terrain AABB
+	float tMax;
+	{
+		vec3 aabbMin = vec3(0, 0, 0);
+		vec3 aabbMax = vec3(1, terrainHeightScale, 1);
+
+		// Inverse direction avoids division and handles infinity correctly
+		vec3 invDir = 1.0 / localDir;
+
+		// Calculate intersections with AABB planes
+		vec3 tInter0 = (aabbMin - localOrigin) * invDir;
+		vec3 tInter1 = (aabbMax - localOrigin) * invDir;
+
+		vec3 tFar = max(tInter0, tInter1);
+
+		tMax = min(min(tFar.x, tFar.y), tFar.z);
+	}
+
+	float t = 0.0f;
+
+	// Coarse
+	for (; t < tMax; t += initialStepSize)
+	{
+		vec3 pos = localOrigin + localDir * t;
+		vec2 uv = clamp(pos.xz, 0.0, 1.0);
+		if (uv.x != pos.x || uv.y != pos.z)
+			//return maxTraceDist;
+			continue;
+		float height = textureLod(TEX_HEIGHTMAP, uv, 0.0).r * terrainHeightScale;
+		if (pos.y <= height) break;
+		t += initialStepSize;
+	}
+
+	if (t >= tMax)
+		return maxTraceDist;
+
+	// Refine
+	float t0 = max(0.0, t - initialStepSize);
+	float t1 = t;
+	for (int i = 0; i < 8; ++i)
+	{
+		t = mix(t0, t1, 0.5);
+		vec3 pos = localOrigin + localDir * t;
+		vec2 uv = clamp(pos.xz, 0.0, 1.0);
+		float height = textureLod(TEX_HEIGHTMAP, uv, 0.0).r * terrainHeightScale;
+		if (pos.y < height) t1 = t;
+		else t0 = t;
+	}
+
+	// Final position and normal
+	vec3 hitPos = localOrigin + localDir * t;
+	vec2 uv = clamp(hitPos.xz, 0.0, 1.0);
+	normal = ComputeNormal(uv);
+
+	return t * terrainSize;
 }
 
 vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 normal)
@@ -347,9 +442,26 @@ vec4 CastGlobal(in Ray ray, uint drawDepth, out vec3 normal)
 	float sphereRadius = 1.0f;
 
 	vec3 rayDir = normalize(ray.d);
-	float t = CastSphere(ray.o, rayDir, sphereCenter, sphereRadius, normal);
+
+	vec3 normalSphere;
+	float tSphere = CastSphere(ray.o, rayDir, sphereCenter, sphereRadius, normalSphere);
+	vec3 normalTerrain;
+	float tTerrain = CastTerrain(ray.o, rayDir, normalTerrain);
+
+	float t = -1.0f;
+	if (tSphere < tTerrain)
+	{
+		t = tSphere;
+		normal = normalSphere;
+	}
+	else
+	{
+		t = tTerrain;
+		normal = normalTerrain;
+	}
+
 	float curTMin;
-	if (t > 0.0f)
+	if (t > 0.0f && t < maxTraceDist)
 	{
 		//curTMin = 0.1f;
 		curTMin = t / length(ray.d);
