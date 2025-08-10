@@ -18,6 +18,7 @@
 #include "RayTrace.glsl"
 #include "PTRayGen.h"
 #include "Brdf.glsl"
+#include "Sky.glsl"
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
@@ -66,7 +67,7 @@ void main()
 
 	vec4 throughput = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0);
 
-	const bool isLastBounce = spec_bounce_index == (_globalUBO.pt_num_bounce_rays - 1);
+	bool isLastBounce = spec_bounce_index == (_globalUBO.pt_num_bounce_rays - 1);
 	vec4 view_direction;
 	vec3 normal;
     vec3 geo_normal;
@@ -220,15 +221,14 @@ void main()
 	
 	//imageStore(IMG_TAA_OUTPUT, ipos, vec4(1, 0, 0, 1));
 	//return;
-	
+
+	vec3 bounce_contrib = vec3(0);
+
 	if (result._t >= r._maxDist)
 	{
 		if (!isLastBounce)
 			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(0));
-		return;
 	}
-
-	vec3 bounce_contrib = vec3(0);
 
 	//imageStore(IMG_TAA_OUTPUT, ipos, vec4(1, 0, 0, 1));
 	//return;
@@ -244,63 +244,71 @@ void main()
 		indirect_specular_weight /= max(1, cone_size * _globalUBO.pt_specular_anti_flicker * 0.01);
 	}
 
-	vec3 bounce_geo_normal = result._normal;
-	vec3 bounce_normal  = bounce_geo_normal;
-	vec3 bounce_base_color = vec3(0.8);
-
-	// HACK
-	/*
-	if (result._normal.z < -0.9f)
+	if (result._t >= r._maxDist)
 	{
-		bounce_base_color = vec3(0.9f, 0.15f, 0.3f);
-		vec3 emissive = bounce_base_color * _globalUBO._fakeEmissive;
-		bounce_contrib += emissive * bounce_throughput * indirect_specular_weight;
+		isLastBounce = true;
+		vec3 skyLight = GetSkyLight(r.d);
+		//bounce_base_color = normalize(skyLight);
+		bounce_contrib += skyLight * bounce_throughput * indirect_specular_weight;
 	}
-	*/
-
-	if (dot(bounce_direction, bounce_normal) > 0)
-		bounce_normal = -bounce_normal;
-
-	bounce_throughput *= bounce_base_color;
-	bounce_throughput *= indirect_specular_weight;
-
-	// Russian Roulette
-	// As the throughput gets smaller, the ray is more likely to get terminated early.
-	// Survivors have their value boosted to make up for fewer samples being in the average.
-	if (true)
+	else
 	{
-		float p = max(bounce_throughput.x, max(bounce_throughput.y, bounce_throughput.z));
-		if (p < RandomFloat01(rng_seed))
+		vec3 bounce_geo_normal = result._normal;
+		vec3 bounce_normal  = bounce_geo_normal;
+		vec3 bounce_base_color = vec3(0.8);
+
+		// HACK
+		/*
+		if (result._normal.z < -0.9f)
 		{
-			if (!isLastBounce)
-				imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(0.0f));
-			return;
+			bounce_base_color = vec3(0.9f, 0.15f, 0.3f);
+			vec3 emissive = bounce_base_color * _globalUBO._fakeEmissive;
+			bounce_contrib += emissive * bounce_throughput * indirect_specular_weight;
 		}
+		*/
+
+		if (dot(bounce_direction, bounce_normal) > 0)
+			bounce_normal = -bounce_normal;
+
+		bounce_throughput *= bounce_base_color;
+		bounce_throughput *= indirect_specular_weight;
+
+		// Russian Roulette
+		// As the throughput gets smaller, the ray is more likely to get terminated early.
+		// Survivors have their value boosted to make up for fewer samples being in the average.
+		if (true)
+		{
+			float p = max(bounce_throughput.x, max(bounce_throughput.y, bounce_throughput.z));
+			if (p < RandomFloat01(rng_seed))
+			{
+				if (!isLastBounce)
+					imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(0.0f));
+				return;
+			}
     
-		// Add the energy we 'lose' by randomly terminating paths
-		bounce_throughput *= 1.0f / p;
-	}
+			// Add the energy we 'lose' by randomly terminating paths
+			bounce_throughput *= 1.0f / p;
+		}
 	
-	vec3 bounce_position = r.o + r.d * result._t;
-	uint bounce_materialID = 1;
+		vec3 bounce_position = r.o + r.d * result._t;
+		uint bounce_materialID = 1;
 
-	// HACK
-	if (isLastBounce)
-	{
-		imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
-		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, hitDist));
-		/*if (result._normal.z < -0.9f)
-			imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1.0f));
-		else*/
-			imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(0.0f));
-	}
-
-	if (!isLastBounce)
-	{
-		imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
-		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, uintBitsToFloat(bounce_materialID)));
-		imageStore(IMG_PT_VIEW_DIRECTION2, ipos, vec4(bounce_direction, 0));
-		imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(bounce_throughput, is_specular_ray ? 1 : 0));
+		if (isLastBounce)
+		{
+			imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
+			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, hitDist));
+			/*if (result._normal.z < -0.9f)
+				imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1.0f));
+			else*/
+				imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(0.0f));
+		}
+		else
+		{
+			imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
+			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, uintBitsToFloat(bounce_materialID)));
+			imageStore(IMG_PT_VIEW_DIRECTION2, ipos, vec4(bounce_direction, 0));
+			imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(bounce_throughput, is_specular_ray ? 1 : 0));
+		}
 	}
 
 	if (is_specular_ray)
