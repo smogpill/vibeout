@@ -6,6 +6,9 @@
 #include "Vibeout/Render/Shared/Utils.h"
 #include "Vibeout/Render/Renderer.h"
 #include "Vibeout/Render/Buffer/Buffer.h"
+#include "Vibeout/Game/Game.h"
+#include "Vibeout/World/World.h"
+#include "Vibeout/World/Heightmap/Heightmap.h"
 
 Textures::Textures(Renderer& renderer, bool& result)
 	: _renderer(renderer)
@@ -426,14 +429,13 @@ bool Textures::InitHeightmap()
 	const VkDevice device = _renderer.GetDevice();
 	VO_TRY(device);
 
-	int width, height, nbComponents;
+	const World* world = _renderer._game.GetWorld();
+	VO_TRY(world);
+	const Heightmap* heightmap = world->GetHeightmap();
+	VO_TRY(heightmap);
 
-	const char* filePath = "Assets/Terrains/Rugged/Heightmap.png";
-
-	uint16* data = stbi_load_16(filePath, &width, &height, &nbComponents, 1);
-	VO_TRY(data, "error loading heightmap tex {}\n", filePath);
-
-	size_t img_size = width * height;
+	const std::vector<uint16>& data = heightmap->Data();
+	size_t img_size = data.size();
 	size_t total_size = img_size * sizeof(uint16_t);
 
 	Buffer::Setup buf_img_upload_setup;
@@ -444,16 +446,11 @@ bool Textures::InitHeightmap()
 	Buffer buf_img_upload(_renderer, buf_img_upload_setup, result);
 	VO_TRY(result);
 
-	uint16* bn_tex = (uint16*)buf_img_upload.Map();
-
-	for (int j = 0; j < img_size; j++)
-		bn_tex[j] = data[j * nbComponents + 0];
-
-	stbi_image_free(data);
-
-
+	uint16* mapped = (uint16*)buf_img_upload.Map();
+	memcpy(mapped, data.data(), total_size);
 	buf_img_upload.Unmap();
-	bn_tex = nullptr;
+
+	const glm::ivec3& size = heightmap->Size();
 
 	VkImageCreateInfo img_info =
 	{
@@ -461,8 +458,8 @@ bool Textures::InitHeightmap()
 		.imageType = VK_IMAGE_TYPE_2D,
 		.format = VK_FORMAT_R16_UNORM,
 		.extent = {
-			.width = (uint32)width,
-			.height = (uint32)height,
+			.width = (uint32)size.x,
+			.height = (uint32)size.z,
 			.depth = 1,
 		},
 		.mipLevels = 1,
@@ -543,7 +540,7 @@ bool Textures::InitHeightmap()
 			.layerCount = 1,
 		},
 		.imageOffset = { 0, 0, 0 },
-		.imageExtent = { (uint32)width, (uint32)height, 1 }
+		.imageExtent = { (uint32)size.x, (uint32)size.z, 1 }
 	};
 	vkCmdCopyBufferToImage(cmd_buf, buf_img_upload.GetBuffer(), _img_heightmap,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cpy_info);
@@ -594,11 +591,14 @@ bool Textures::InitTerrainDiffuse()
 	const VkDevice device = _renderer.GetDevice();
 	VO_TRY(device);
 
+	const World* world = _renderer._game.GetWorld();
+	VO_TRY(world);
+
 	int width, height, nbComponents;
 
-	const char* filePath = "Assets/Terrains/Rugged/Diffuse.png";
+	const std::string filePath = (std::filesystem::path(world->GetPath()) / "Diffuse.png").string();
 
-	uint8* data = stbi_load(filePath, &width, &height, &nbComponents, STBI_rgb_alpha);
+	uint8* data = stbi_load(filePath.c_str(), &width, &height, &nbComponents, STBI_rgb_alpha);
 	VO_TRY(data, "error loading tex {}\n", filePath);
 
 	size_t img_size = width * height;

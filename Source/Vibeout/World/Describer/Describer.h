@@ -4,10 +4,10 @@
 #pragma once
 #include "Vibeout/Math/AABB.h"
 
-class SparseOctreeDescriptor
+class Describer
 {
 public:
-	virtual ~SparseOctreeDescriptor() = default;
+	virtual ~Describer() = default;
 
 	virtual bool Overlaps(const glm::ivec3& coords) const = 0;
 protected:

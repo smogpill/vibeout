@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 class SparseOctree;
-class SparseOctreeDescriptor;
+class Describer;
 
 class SparseOctreeBuilder
 {
 public:
 	void Reserve(uint32 nbNodes);
-	auto Build(uint32 nbLevels, const SparseOctreeDescriptor& descriptor) -> SparseOctree*;
+	auto Build(uint32 nbLevels, const Describer& describer) -> SparseOctree*;
 
 private:
 	static constexpr uint32 s_maxNblevels = 16;

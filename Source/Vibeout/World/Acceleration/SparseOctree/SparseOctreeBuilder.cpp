@@ -3,14 +3,14 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "SparseOctreeBuilder.h"
-#include "SparseOctreeDescriptor.h"
+#include "Vibeout/World/Describer/Describer.h"
 
 void SparseOctreeBuilder::Reserve(uint32 nbNodes)
 {
 	_nodes.reserve(nbNodes);
 }
 
-SparseOctree* SparseOctreeBuilder::Build(uint32 nbLevels, const SparseOctreeDescriptor& descriptor)
+SparseOctree* SparseOctreeBuilder::Build(uint32 nbLevels, const Describer& describer)
 {
 	_nodes.clear();
 	_nodes.emplace_back(Node());
@@ -42,7 +42,7 @@ SparseOctree* SparseOctreeBuilder::Build(uint32 nbLevels, const SparseOctreeDesc
 		childCoords.x |= (task._childIdx >> 0) & 1;
 		childCoords.y |= (task._childIdx >> 1) & 1;
 		childCoords.z |= (task._childIdx >> 2) & 1;
-		if (descriptor.Overlaps(childCoords))
+		if (describer.Overlaps(childCoords))
 		{
 			const uint32 childNodeIdx = (uint32)_nodes.size();
 			node._children[task._childIdx] = childNodeIdx;

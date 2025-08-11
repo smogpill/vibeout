@@ -11,11 +11,14 @@ public:
 	Game();
 	~Game();
 
+	void SetWorld(const char* name);
+
 	void Update(float deltaTime);
 	float GetDeltaTime() const { return _deltaTime; }
 	Camera& GetCamera() { return *_camera; }
 	const GameState& GetState() const { return _state; }
 	void OnMouseMotion(float xrel, float yrel);
+	World* GetWorld() const { return _world; }
 
 private:
 	void FixedUpdate(float deltaTime);

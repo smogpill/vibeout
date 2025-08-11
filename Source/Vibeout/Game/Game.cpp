@@ -19,6 +19,19 @@ Game::~Game()
 	delete _camera;
 }
 
+void Game::SetWorld(const char* name)
+{
+	delete _world;
+	bool result;
+	_world = new World(name, result);
+	if (!result)
+	{
+		VO_ERROR("Failed to set world: {}", name);
+		delete _world;
+		_world = nullptr;
+	}
+}
+
 void Game::Update(float rawDeltaTime)
 {
 	_deltaTime = std::clamp(rawDeltaTime, 0.0f, 0.1f);

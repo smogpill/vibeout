@@ -39,6 +39,7 @@ int main(int argc, char* argv[])
 
     {
         Game game;
+        game.SetWorld("Rugged");
 
         bool result;
         Renderer renderer(*window, game, result);
