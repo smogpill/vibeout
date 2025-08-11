@@ -33,12 +33,12 @@ public:
 
 	void Render();
 
-	VkDevice GetDevice() const { return _device; }
+	auto GetDevice() const -> VkDevice { return _device; }
 	template <class T>
 	void SetObjectName(const T& object, const char* name) { SetObjectName((uint64)object, GetVkObjectType<T>::_value, name); }
 	void SetObjectName(uint64 object, VkObjectType objectType, const char* name);
 	bool GetMemoryType(uint32 memReqTypeBits, VkMemoryPropertyFlags memProps, uint32& outMemType) const;
-	VkDeviceSize GetAvailableVideoMemory() const;
+	auto GetAvailableVideoMemory() const -> VkDeviceSize;
 	bool AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* memory);
 
 	void OnWindowResized();
@@ -87,8 +87,8 @@ private:
 	bool Recreate();
 
 	void UpdateSizes();
-	VkExtent2D GetScreenImageExtent() const;
-	VkExtent2D GetRenderExtent() const;
+	auto GetScreenImageExtent() const -> VkExtent2D;
+	auto GetRenderExtent() const -> VkExtent2D;
 	void EvaluateAASettings();
 
 	bool BeginRender();
@@ -97,7 +97,7 @@ private:
 
 	bool UpdateUBO();
 
-	VkCommandBuffer BeginCommandBuffer(CommandBufferGroup& group);
+	auto BeginCommandBuffer(CommandBufferGroup& group) -> VkCommandBuffer;
 	bool SubmitCommandBuffer(VkCommandBuffer cmd_buf, VkQueue queue, int wait_semaphore_count, VkSemaphore* wait_semaphores,
 		VkPipelineStageFlags* wait_stages, int signal_semaphore_count, VkSemaphore* signal_semaphores, VkFence fence);
 	bool SubmitCommandBufferSimple(VkCommandBuffer cmd_buf, VkQueue queue);
@@ -110,7 +110,7 @@ private:
 	void BeginQueueLabel(VkQueue queue, const char* name);
 	void EndQueueLabel(VkQueue queue);
 	void InsertQueueLabel(VkQueue queue, const char* label);
-	std::pair<uint32, uint32> GetSize() const;
+	auto GetSize() const -> std::pair<uint32, uint32>;
 
 	// Context
 	//----------------------------

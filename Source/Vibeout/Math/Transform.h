@@ -9,12 +9,12 @@ public:
 	Transform() = default;
 	Transform(const glm::dquat& rotation, const glm::dvec3& translation) : _rotation(rotation), _translation(translation) {}
 
-	glm::dquat& Rotation() { return _rotation; }
-	const glm::dquat& Rotation() const { return _rotation; }
-	glm::dvec3& Translation() { return _translation; }
-	const glm::dvec3& Translation() const { return _translation; }
-	Transform operator*(const Transform& other);
-	glm::dmat4 To_dmat4() const;
+	auto Rotation() -> glm::dquat& { return _rotation; }
+	auto Rotation() const -> const glm::dquat& { return _rotation; }
+	auto Translation() -> glm::dvec3& { return _translation; }
+	auto Translation() const -> const glm::dvec3& { return _translation; }
+	auto operator*(const Transform& other) -> Transform;
+	auto To_dmat4() const -> glm::dmat4;
 
 private:
 	glm::dquat _rotation = glm::identity<glm::dquat>();

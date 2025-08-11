@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "Vibeout/Base/Transform.h"
+#include "Vibeout/Math/Transform.h"
 
 class Node
 {
@@ -11,8 +11,8 @@ public:
 	void SetParent(Node* parent);
 	void SetLocalTransform(const Transform& transform);
 	void SetGlobalTransform(const Transform& transform);
-	const Transform& GetLocalTransform() const;
-	const Transform& GetGlobalTransform() const;
+	auto GetLocalTransform() const -> const Transform&;
+	auto GetGlobalTransform() const -> const Transform&;
 private:
 	void UpdateLocalTransformIfNecessary() const;
 	void UpdateGlobalTransformIfNecessary() const;

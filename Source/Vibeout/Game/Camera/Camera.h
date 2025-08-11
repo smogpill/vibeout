@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "Vibeout/Base/Transform.h"
+#include "Vibeout/Math/Transform.h"
 #include "Vibeout/World/Node.h"
 
 class Camera

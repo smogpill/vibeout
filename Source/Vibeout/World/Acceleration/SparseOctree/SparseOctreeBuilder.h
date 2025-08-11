@@ -3,12 +3,13 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 class SparseOctree;
+class SparseOctreeDescriptor;
 
 class SparseOctreeBuilder
 {
 public:
-	SparseOctreeBuilder();
-	SparseOctree* Build(uint32 nbLevels, const uint16* heightmap, uint heightmapWidth, uint heightmapHeight);
+	void Reserve(uint32 nbNodes);
+	auto Build(uint32 nbLevels, const SparseOctreeDescriptor& descriptor) -> SparseOctree*;
 
 private:
 	static constexpr uint32 s_maxNblevels = 16;
@@ -17,5 +18,6 @@ private:
 		uint32 _children[8] = {};
 	};
 	std::vector<Node> _nodes;
-	uint _size = 0;
+	uint32 _borderSize = 0;
+	uint32 _firstFreeNode = uint32(-1);
 };
