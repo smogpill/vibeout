@@ -320,7 +320,7 @@ vec3 SampleSkyLight1(vec3 pos, vec3 normal)
         cosTheta * normal
     );
 
-    if (TestObstruction(pos + 0.1f * sampleDir, sampleDir))
+    if (TestObstruction(pos, sampleDir))
         return vec3(0, 0, 0);
 
     // Get sky color and divide by PDF (cosTheta / PI)
@@ -357,7 +357,7 @@ vec3 SampleSkyLight2(vec3 pos, vec3 normal)
     );
 
     /*
-    if (TestObstruction(pos + 0.1f * sampleDir, sampleDir))
+    if (TestObstruction(pos, sampleDir))
         return vec3(0, 0, 0);
     */
 
@@ -365,36 +365,30 @@ vec3 SampleSkyLight2(vec3 pos, vec3 normal)
     return GetSkyLight(sampleDir) * (PI / max(cosTheta, 1e-5));
 }
 
-vec3 SampleSkyLight3(vec3 pos, vec3 normal)
+vec3 SampleSunLight(vec3 pos, vec3 normal)
 {
-    vec2 rand = GetRand2(0);
-
-    // --- 1. Blend between sun direction and cosine sampling ---
-    float sunWeight = 0.8; // 50% chance to sample toward sun (adjust as needed)
-    bool sampleSun = (rand.x < sunWeight);
-    if (sampleSun)
+    if (dot(normal, sunDirection) > 0.0f)
     {
-        if (dot(normal, sunDirection) > 0.0f)
+        vec2 rand = GetRand2(0);
+
+        // --- 2. Importance sample near sun direction ---
+        float coneAngle = 0.05; // Controls sun sampling tightness
+        vec3 sunSampleDir = RandomSunJitter(rand, sunDirection, coneAngle);
+
+        if (!TestObstruction(pos, sunSampleDir))
         {
-            // --- 2. Importance sample near sun direction ---
-            float coneAngle = 0.05; // Controls sun sampling tightness
-            vec3 sunSampleDir = RandomSunJitter(rand, sunDirection, coneAngle);
-
-            if (TestObstruction(pos + 0.1f, sunSampleDir))
-                return vec3(0, 0, 0);
-
             // Calculate PDF for sun sampling (directional bias)
-            float sunPdf = sunWeight * calculateSunPDF(sunSampleDir, sunDirection, coneAngle);
+            float sunPdf = calculateSunPDF(sunSampleDir, sunDirection, coneAngle);
             return GetSkyLight(sunSampleDir) / max(sunPdf, 1e-5);
-        }
-        else
-        {
-            //return vec3(0.0f, 0.0f, 0.0f);
         }
     }
 
-    // --- 3. Fallback to cosine-weighted sampling ---
-    vec2 rand2 = GetRand2(1);
+    return vec3(0, 0, 0);
+}
+
+vec3 SampleSkyExceptSunLight(vec3 pos, vec3 normal, int randOffset)
+{
+    vec2 rand2 = GetRand2(randOffset);
     float phi = 2.0 * PI * rand2.x;
     float cosTheta = sqrt(rand2.y);  // Importance sampling for cosine
     float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
@@ -408,15 +402,30 @@ vec3 SampleSkyLight3(vec3 pos, vec3 normal)
         cosTheta * normal
     );
 
-    if (TestObstruction(pos + 0.1f, sampleDir))
+    if (TestObstruction(pos, sampleDir))
         return vec3(0, 0, 0);
 
-    // PDF for cosine sampling (adjusted for blend)
-    float pdf = (1.0 - sunWeight) * (cosTheta / PI);
+    float pdf = cosTheta / PI;
     return GetSkyLight(sampleDir) / max(pdf, 1e-5);
+}
+
+vec3 SampleSkyLight3(vec3 pos, vec3 normal)
+{
+    vec2 rand = GetRand2(0);
+
+    // Sun
+    vec3 lighting = SampleSunLight(pos, normal);
+
+    // Sky
+    lighting += SampleSkyExceptSunLight(pos, normal, 1);
+    //lighting += SampleSkyExceptSunLight(pos, normal, 2);
+    //lighting += SampleSkyExceptSunLight(pos, normal, 3);
+    //lighting += SampleSkyExceptSunLight(pos, normal, 4);
+
+    return lighting;
 }
 
 vec3 SampleSkyLight(vec3 pos, vec3 normal)
 {
-    return SampleSkyLight1(pos, normal);
+    return SampleSkyLight3(pos, normal);
 }

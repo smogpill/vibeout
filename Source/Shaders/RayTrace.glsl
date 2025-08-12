@@ -161,7 +161,7 @@ void CastGlobal(in Ray ray, inout CastResult result)
 bool TestObstruction(vec3 pos, vec3 dir)
 {
 	Ray r;
-	r.o = pos;
+	r.o = pos + dir * 0.01f;
 	r.d = dir;
 	r._maxDist = maxTraceDist;
 
