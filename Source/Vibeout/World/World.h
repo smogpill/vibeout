@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 class Heightmap;
+class SparseOctree;
 
 class World
 {
@@ -19,4 +20,5 @@ private:
 	std::string _name;
 	std::string _path;
 	Heightmap* _heightmap = nullptr;
+	SparseOctree* _octree = nullptr;
 };

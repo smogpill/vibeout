@@ -4,6 +4,9 @@
 #include "PCH.h"
 #include "World.h"
 #include "Vibeout/World/Heightmap/Heightmap.h"
+#include "Vibeout/World/Describer/WorldDescriber.h"
+#include "Vibeout/World/Acceleration/SparseOctree/SparseOctreeBuilder.h"
+#include "Vibeout/World/Acceleration/SparseOctree/SparseOctree.h"
 
 World::World(const char* name, bool& result)
 	: _name(name)
@@ -13,6 +16,7 @@ World::World(const char* name, bool& result)
 
 World::~World()
 {
+	delete _octree;
 	delete _heightmap;
 }
 
@@ -23,5 +27,8 @@ bool World::Init()
 	bool result;
 	_heightmap = new Heightmap(heightmapPath.c_str(), result);
 	VO_TRY(result);
+	WorldDescriber describer(*this);
+	SparseOctreeBuilder builder;
+	_octree = builder.Build(4, describer);
 	return true;
 }

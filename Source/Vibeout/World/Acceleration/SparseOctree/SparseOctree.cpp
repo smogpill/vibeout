@@ -3,3 +3,8 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "SparseOctree.h"
+
+SparseOctree::SparseOctree(std::vector<uint32>&& data)
+	: _data(std::move(data))
+{
+}

@@ -6,6 +6,9 @@
 class SparseOctree
 {
 public:
+	SparseOctree(std::vector<uint32>&& data);
+
+	static const uint32 s_fullInteriorNodePtr = uint32(-1);
 
 private:
 	std::vector<uint32> _data;
