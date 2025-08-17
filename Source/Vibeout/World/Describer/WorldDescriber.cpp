@@ -12,8 +12,30 @@ WorldDescriber::WorldDescriber(const World& world)
 	VO_ASSERT(_heightmap);
 }
 
-bool WorldDescriber::Overlaps(const glm::ivec3& coords) const
+bool WorldDescriber::OverlapsNormalizedAABB(const AABB& aabb) const
 {
+	const std::vector<uint16>& data = _heightmap->Data();
+	const glm::ivec3 size = _heightmap->Size();
+	const glm::ivec3 aabbMin = glm::ivec3(aabb.Min() * glm::vec3(size));
+	const glm::ivec3 aabbMax = glm::min(glm::ivec3(aabb.Max() * glm::vec3(size)), size - 1);
 
-	return false;
+	uint16 maxY = 0;
+	for (int32 z = aabbMin.z; z <= aabbMax.z; ++z)
+	{
+		uint32 index = z * size.x;
+		for (int32 x = aabbMin.x; x <= aabbMax.x; ++x)
+		{
+			maxY = std::max(data[index + x], maxY);
+		}
+	}
+	return aabb.Min().y >= 0.0f && aabb.Max().y <= maxY;
 }
+
+/*
+auto Describer::ConvertCoordsToLocalAABB(const glm::ivec3& coords, uint32 level) const -> AABB
+{
+	//const float scale = std::bit_cast<float>(((~level) & 0xff) << 23u);
+	//const glm::vec3 origin = glm::vec3(1) - ;
+	return AABB(origin, origin + glm::vec3(scale));
+}
+*/

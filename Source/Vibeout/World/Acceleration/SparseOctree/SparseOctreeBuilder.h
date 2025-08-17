@@ -8,18 +8,19 @@ class Describer;
 class SparseOctreeBuilder
 {
 public:
+	static constexpr uint32 s_maxNblevels = 16;
+
 	void Reserve(uint32 nbNodes);
 	void Clear();
 	auto Build(uint32 nbLevels, const Describer& describer) -> SparseOctree*;
 
 private:
-	static constexpr uint32 s_maxNblevels = 16;
 	struct Node
 	{
 		uint32 _childPtrs[8] = {};
 	};
 
-	void BuildBreadthFirst(uint32 nbLevels, const Describer& describer);
+	void BuildOctree(uint32 nbLevels, const Describer& describer);
 
 	SparseOctree* Encode();
 	bool IsNodeAlive(uint32 nodeIdx) const;
@@ -28,6 +29,7 @@ private:
 	uint32 GetNbFreeNodes() const { return 0; }
 	uint32 CreateNode();
 	void DestroyNode(uint32 node);
+	uint32 TryNodeSubstitution(uint32 nodePtr);
 	
 	std::vector<Node> _nodesSparse;
 	uint32 _borderSize = 0;

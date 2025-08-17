@@ -11,7 +11,7 @@ class WorldDescriber final : public Describer
 public:
 	WorldDescriber(const World& world);
 
-	bool Overlaps(const glm::ivec3& coords) const override;
+	bool OverlapsNormalizedAABB(const AABB& aabb) const override;
 
 private:
 	const World& _world;
