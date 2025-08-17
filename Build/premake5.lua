@@ -34,7 +34,6 @@ function SetCppProjectDefaults(name)
 	vectorextensions "AVX"
 	symbols "On"
 	cppdialect "C++20"
-	runtime "Release" -- Even on debug builds, Unreal is setup this way anyway. But can't use the CRT library memory leaks detector
 	fatalwarnings { "All"}
 	flags { "MultiProcessorCompile" }
 	files { "**.cpp", "**.h", "**.hpp", "**.inl", "**.natvis" }

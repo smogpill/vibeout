@@ -12,6 +12,10 @@
 //#define VMA_VULKAN_VERSION 1003000
 #define GLM_FORCE_XYZW_ONLY
 
+#if VO_DEBUG
+#define _ITERATOR_DEBUG_LEVEL 2
+#endif
+
 #include <cassert>
 #include <stdio.h>
 #include <iostream>

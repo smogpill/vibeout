@@ -11,7 +11,7 @@ class WorldDescriber final : public Describer
 public:
 	WorldDescriber(const World& world);
 
-	bool OverlapsNormalizedAABB(const AABB& aabb) const override;
+	OverlapType OverlapsNormalizedAABB(const AABB& aabb) const override;
 
 private:
 	const World& _world;

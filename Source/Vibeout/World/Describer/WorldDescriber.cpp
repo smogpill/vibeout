@@ -12,7 +12,7 @@ WorldDescriber::WorldDescriber(const World& world)
 	VO_ASSERT(_heightmap);
 }
 
-bool WorldDescriber::OverlapsNormalizedAABB(const AABB& aabb) const
+auto WorldDescriber::OverlapsNormalizedAABB(const AABB& aabb) const -> OverlapType
 {
 	const std::vector<uint16>& data = _heightmap->Data();
 	const glm::ivec3 size = _heightmap->Size();
@@ -28,7 +28,15 @@ bool WorldDescriber::OverlapsNormalizedAABB(const AABB& aabb) const
 			maxY = std::max(data[index + x], maxY);
 		}
 	}
-	return aabb.Min().y >= 0.0f && aabb.Max().y <= maxY;
+	if ((aabb.Min().y * size.y) <= maxY)
+	{
+		if ((aabb.Max().y * size.y) <= maxY)
+			return OverlapType::INTERIOR;
+		else
+			return OverlapType::INTERSECTION;
+	}
+
+	return OverlapType::NONE;
 }
 
 /*

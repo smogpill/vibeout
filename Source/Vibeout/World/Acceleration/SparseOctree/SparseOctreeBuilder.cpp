@@ -7,30 +7,22 @@
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctree.h"
 #include "Vibeout/Math/AABB.h"
 
-void SparseOctreeBuilder::Reserve(uint32 nbNodes)
+SparseOctreeBuilder::~SparseOctreeBuilder()
 {
-	_nodesSparse.reserve(nbNodes);
-}
-
-void SparseOctreeBuilder::Clear()
-{
-	_nodesSparse.clear();
-	_firstFreeNode = uint32(-1);
+	for (Node* block : _nodeBlocks)
+		delete[] (char*)block;
 }
 
 SparseOctree* SparseOctreeBuilder::Build(uint32 nbLevels, const Describer& describer)
 {
-	Clear();
 	BuildOctree(nbLevels, describer);
-	SparseOctree* octree = Encode();
-	return octree;
+	return Encode();
 }
 
 void SparseOctreeBuilder::BuildOctree(uint32 nbLevels, const Describer& describer)
 {
 	struct Task
 	{
-		glm::ivec3 _coords;
 		glm::vec3 _origin;
 		uint32 _nodePtr;
 		uint32 _childIdx;
@@ -48,7 +40,6 @@ void SparseOctreeBuilder::BuildOctree(uint32 nbLevels, const Describer& describe
 		task._level = 0;
 		task._childIdx = 0;
 		task._idxInParent = 0;
-		task._coords = glm::ivec3(0, 0, 0);
 		task._origin = glm::ivec3(0, 0, 0);
 		task._childScale = 0.5f;
 	}
@@ -58,7 +49,7 @@ void SparseOctreeBuilder::BuildOctree(uint32 nbLevels, const Describer& describe
 	{
 		Task& task = stack[stackIdx];
 		const uint32 nodePtr = task._nodePtr;
-		Node& node = _nodesSparse[nodePtr];
+		Node& node = GetNode(nodePtr);
 		if (task._childIdx == 8)
 		{
 			--stackIdx;
@@ -66,43 +57,45 @@ void SparseOctreeBuilder::BuildOctree(uint32 nbLevels, const Describer& describe
 			if (newNodePtr != nodePtr && stackIdx >= 0)
 			{
 				Task& parentTask = stack[stackIdx];
-				Node& parentNode = _nodesSparse[parentTask._nodePtr];
+				Node& parentNode = GetNode(parentTask._nodePtr);
 				parentNode._childPtrs[task._idxInParent] = newNodePtr;
 			}
 			continue;
 		}
-		glm::ivec3 childCoords = task._coords << 1;
-		glm::ivec3 axes;
-		axes[0] = (task._childIdx >> 0) & 1;
-		axes[1] = (task._childIdx >> 1) & 1;
-		axes[2] = (task._childIdx >> 2) & 1;
-		childCoords.x |= axes[0];
-		childCoords.y |= axes[1];
-		childCoords.z |= axes[2];
-		glm::vec3 childOrigin = task._origin;
-		childOrigin += glm::vec3(axes) * task._childScale;
+		const glm::ivec3 axes(
+			(task._childIdx >> 0) & 1,
+			(task._childIdx >> 1) & 1,
+			(task._childIdx >> 2) & 1);
+		const glm::vec3 childOrigin = task._origin + glm::vec3(axes) * task._childScale;
 		aabb.Min() = childOrigin;
 		aabb.Max() = childOrigin + glm::vec3(task._childScale);
-		const uint32 childLevel = task._level + 1;
-		if (describer.OverlapsNormalizedAABB(aabb))
+		switch (describer.OverlapsNormalizedAABB(aabb))
+		{
+		case Describer::OverlapType::INTERSECTION:
 		{
 			if (task._level < nbLevels)
 			{
-				const uint32 nodePtr = CreateNode();
-				node._childPtrs[task._childIdx] = nodePtr;
+				const uint32 childNodePtr = CreateNode();
+				node._childPtrs[task._childIdx] = childNodePtr;
 				Task& childTask = stack[++stackIdx];
-				childTask._coords = childCoords;
 				childTask._origin = childOrigin;
-				childTask._nodePtr = nodePtr;
+				childTask._nodePtr = childNodePtr;
 				childTask._childIdx = 0;
 				childTask._idxInParent = task._childIdx;
-				childTask._level = childLevel;
+				childTask._level = task._level + 1;
 				childTask._childScale = task._childScale * 0.5f;
 			}
 			else
 			{
-				node._childPtrs[task._childIdx] = uint32(-1);
+				node._childPtrs[task._childIdx] = SparseOctree::s_interiorNodePtr;
 			}
+			break;
+		}
+		case Describer::OverlapType::INTERIOR:
+		{
+			node._childPtrs[task._childIdx] = SparseOctree::s_interiorNodePtr;
+			break;
+		}
 		}
 		++task._childIdx;
 	} while (stackIdx >= 0);
@@ -110,21 +103,20 @@ void SparseOctreeBuilder::BuildOctree(uint32 nbLevels, const Describer& describe
 
 SparseOctree* SparseOctreeBuilder::Encode()
 {
-	if (GetNbNodes() == 0 || !IsNodeAlive(0))
+	if (_nbNodes == 0)
 		return nullptr;
 	std::vector<uint32> compressedNodes;
 
-	const uint32 nbNodes = GetNbNodes();
-	compressedNodes.reserve(nbNodes);
+	compressedNodes.reserve(_nbNodes);
 
 	std::vector<uint32> stackedNodes;
 	std::vector<uint32> rawToCompressed;
 	stackedNodes.reserve(256); // Arbitrary
-	rawToCompressed.resize(_nodesSparse.size(), 0);
+	rawToCompressed.resize(_nodeBlocks.size() * s_perBlockCapacity, 0);
 
 	auto PushNewCompressedNode = [&](const uint32 nodePtr)
 		{
-			const Node& node = _nodesSparse[nodePtr];
+			const Node& node = GetNode(nodePtr);
 			uint32 mask = 0;
 			uint32 nbChildren = 0;
 			for (uint8 childIdx = 0; childIdx < 8; ++childIdx)
@@ -152,7 +144,7 @@ SparseOctree* SparseOctreeBuilder::Encode()
 	{
 		const uint32 stackedNodeIdx = stackedNodes.back();
 		stackedNodes.pop_back();
-		const Node& node = _nodesSparse[stackedNodeIdx];
+		const Node& node = GetNode(stackedNodeIdx);
 		const uint32 compressedNodeIdx = rawToCompressed[stackedNodeIdx];
 		uint32 compressedChildPtrIdx = compressedNodeIdx + 1;
 		for (uint8 childIdx = 0; childIdx < 8; ++childIdx)
@@ -175,61 +167,67 @@ SparseOctree* SparseOctreeBuilder::Encode()
 	return new SparseOctree(std::move(compressedNodes));
 }
 
-bool SparseOctreeBuilder::IsNodeAlive(uint32 nodeIdx) const
-{
-	return IsNodeAlive(_nodesSparse[nodeIdx]);
-}
-
 bool SparseOctreeBuilder::IsNodeAlive(const Node& node) const
 {
 	return node._childPtrs[1] != uint32(-2);
 }
 
-uint32 SparseOctreeBuilder::GetNbNodes() const
-{
-	return (uint32)_nodesSparse.size() - GetNbFreeNodes();
-}
-
 uint32 SparseOctreeBuilder::CreateNode()
 {
-	uint32 index;
 	if (_firstFreeNode == (uint32)-1)
 	{
-		index = (uint32)_nodesSparse.size();
-		_nodesSparse.emplace_back();
+		const uint32 blockIdx = (uint32)_nodeBlocks.size();
+		const uint32 firstNodePtr = blockIdx << s_blockShift;
+		uint32 nodePtr = firstNodePtr;
+		char* buffer = new char[s_blockAllocationSize];
+		Node* nodeBuffer = (Node*)buffer;
+		for (uint32 nodeIdx = 0; nodeIdx < s_perBlockCapacity; ++nodeIdx)
+		{
+			Node* node = &nodeBuffer[nodeIdx];
+			new (node) Node();
+			node->_childPtrs[0] = ++nodePtr;
+			node->_childPtrs[1] = (uint32)-2;
+		}
+		nodeBuffer[s_perBlockCapacity - 1]._childPtrs[0] = uint32(-1);
+		_nodeBlocks.push_back(nodeBuffer);
+		_firstFreeNode = firstNodePtr;
 	}
-	else
-	{
-		index = _firstFreeNode;
-		Node& node = _nodesSparse[_firstFreeNode];
-		node = Node();
-		_firstFreeNode = node._childPtrs[0];
-	}
+
+	const uint32 index = _firstFreeNode;
+	Node& node = GetNode(_firstFreeNode);
+	_firstFreeNode = node._childPtrs[0];
+	node = Node();
+	++_nbNodes;
 	return index;
 }
 
-void SparseOctreeBuilder::DestroyNode(uint32 nodeIdx)
+void SparseOctreeBuilder::DestroyNode(uint32 nodePtr)
 {
-	Node& node = _nodesSparse[nodeIdx];
+	Node& node = GetNode(nodePtr);
 	VO_ASSERT(IsNodeAlive(node));
+	--_nbNodes;
 	node._childPtrs[0] = _firstFreeNode;
 	node._childPtrs[1] = uint32(-2);
-	_firstFreeNode = nodeIdx;
+	_firstFreeNode = nodePtr;
 }
 
 uint32 SparseOctreeBuilder::TryNodeSubstitution(uint32 nodePtr)
 {
-	const Node& node = _nodesSparse[nodePtr];
+	const Node& node = GetNode(nodePtr);
 	uint32 childIdx;
-	for (childIdx = 0; childIdx < 8; ++childIdx)
+
+	if (nodePtr)
 	{
-		if (node._childPtrs[childIdx] != SparseOctree::s_interiorNodePtr)
-			break;
-	}
-	if (childIdx == 8)
-	{
-		DestroyNode(nodePtr);
-		return SparseOctree::s_interiorNodePtr;
+		for (childIdx = 0; childIdx < 8; ++childIdx)
+		{
+			if (node._childPtrs[childIdx] != SparseOctree::s_interiorNodePtr)
+				break;
+		}
+		if (childIdx == 8)
+		{
+			DestroyNode(nodePtr);
+			return SparseOctree::s_interiorNodePtr;
+		}
 	}
 	for (childIdx = 0; childIdx < 8; ++childIdx)
 	{
@@ -243,4 +241,11 @@ uint32 SparseOctreeBuilder::TryNodeSubstitution(uint32 nodePtr)
 	}
 
 	return nodePtr;
+}
+
+auto SparseOctreeBuilder::GetNode(uint32 nodePtr) -> Node&
+{
+	const uint32 blockIdx = nodePtr >> s_blockShift;
+	const uint32 indexInBlock = nodePtr & s_indexMask;
+	return _nodeBlocks[blockIdx][indexInBlock];
 }

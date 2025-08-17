@@ -7,10 +7,17 @@
 class Describer
 {
 public:
+	enum class OverlapType
+	{
+		NONE,
+		INTERSECTION,
+		INTERIOR
+	};
+
 	virtual ~Describer() = default;
 
 	//virtual bool Overlaps(const glm::ivec3& coords, uint level) const = 0;
-	virtual bool OverlapsNormalizedAABB(const AABB& aabb) const = 0;
+	virtual OverlapType OverlapsNormalizedAABB(const AABB& aabb) const = 0;
 protected:
 	//auto ConvertCoordsToLocalAABB(const glm::ivec3& coords, uint level) const -> AABB;
 };
