@@ -13,7 +13,8 @@ public:
 	enum class BufferID
 	{
 		UNIFORM,
-		TLAS,
+		TLAS_NODES,
+		TLAS_LEAVES,
 		END
 	};
 

@@ -84,12 +84,21 @@ bool Buffers::Init()
 			VO_TRY(result);
 		}
 
-		// TLAS
+		// TLAS Nodes
 		{
-			setup._size = 1024; // TODO
+			setup._size = 128 * 1024 * 1024; // TODO
 			setup._usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			bool result;
-			_deviceBuffers[(int)BufferID::TLAS] = new Buffer(_renderer, setup, result);
+			_deviceBuffers[(int)BufferID::TLAS_NODES] = new Buffer(_renderer, setup, result);
+			VO_TRY(result);
+		}
+
+		// TLAS Leaves
+		{
+			setup._size = 128 * 1024 * 1024; // TODO
+			setup._usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			bool result;
+			_deviceBuffers[(int)BufferID::TLAS_LEAVES] = new Buffer(_renderer, setup, result);
 			VO_TRY(result);
 		}
 	}

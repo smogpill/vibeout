@@ -210,7 +210,18 @@ void PathTracer::TracePrimaryRays(VkCommandBuffer commandBuffer)
 
 	// Unsure if required
 	{
-		Buffer* buffer = buffers->GetDeviceBuffer(Buffers::BufferID::TLAS);
+		Buffer* buffer = buffers->GetDeviceBuffer(Buffers::BufferID::TLAS_NODES);
+		VkBufferMemoryBarrier barrier = BUFFER_BARRIER();
+		barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.buffer = buffer->GetBuffer();
+		barrier.size = VK_WHOLE_SIZE;
+		QUEUE_BUFFER_BARRIER(commandBuffer, barrier);
+	}
+
+	// Unsure if required
+	{
+		Buffer* buffer = buffers->GetDeviceBuffer(Buffers::BufferID::TLAS_LEAVES);
 		VkBufferMemoryBarrier barrier = BUFFER_BARRIER();
 		barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
