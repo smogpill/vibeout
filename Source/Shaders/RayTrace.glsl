@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 
+const int maxLevels = 23;
 const float maxTraceDist = 1e6f;
 const float terrainSize = 10.0f;
 const float terrainHeightScale = 0.8f;
@@ -20,6 +21,29 @@ struct CastResult
 	vec2 _uv;
 	vec3 _normal;
 };
+
+// Counts amount of bits in 8 bit int
+uint CountBits8(in uint num)
+{
+	return bitCount(num & 0xff);
+}
+
+// copy sign of s into value x
+float copysign(float x, float s)
+{
+	return uintBitsToFloat((floatBitsToUint(s) & 0x80000000u) | (floatBitsToUint(x) & 0x7fffffffu));
+}
+
+// same as above, if we know x is non-negative
+float copysignp(float x, float s)
+{
+	return uintBitsToFloat((floatBitsToUint(s) & 0x80000000u) | floatBitsToUint(x));
+}
+
+uint GetTLASNode(in uint idx)
+{
+	return inTLASNodes._data[idx];
+}
 
 vec3 ComputeTerrainNormal(vec2 uv)
 {
@@ -147,15 +171,216 @@ void CastSphere(in Ray ray, in vec3 ce, float ra, inout CastResult result)
 	}
 }
 
+void CastContent(in Ray ray, inout CastResult result)
+{
+	vec3 sphereCenter = vec3(0, 0, -10);
+	float sphereRadius = 1.0f;
+	CastSphere(ray, sphereCenter, sphereRadius, result);
+	CastTerrain(ray, result);
+}
+
+void CastTLAS(in Ray ray, inout CastResult result)
+{
+	Ray originalRay = ray;
+	vec3 scale = vec3(terrainSize, terrainSize * terrainHeightScale, terrainSize);
+	ray.o /= scale;
+	ray.d *= ray._maxDist / scale;
+
+	//-------------------------------------------------------
+	// INIT
+	//-------------------------------------------------------
+	float tMaxStack[maxLevels + 1];
+	uint nodeStack[maxLevels + 1];
+
+	const float epsilon = exp2(-maxLevels);
+	const vec3 absRayDir = abs(ray.d);
+	if (absRayDir.x < epsilon) ray.d.x = copysignp(epsilon, ray.d.x);
+	if (absRayDir.y < epsilon) ray.d.y = copysignp(epsilon, ray.d.y);
+	if (absRayDir.z < epsilon) ray.d.z = copysignp(epsilon, ray.d.z);
+
+	const vec3 tCoef = 1.0f / -abs(ray.d);
+	vec3 tBias = tCoef * (ray.o + vec3(1.0f));
+
+	int octantMask = 7;
+	if (ray.d.x > 0.f) octantMask ^= 1, tBias.x = 3.f * tCoef.x - tBias.x;
+	if (ray.d.y > 0.f) octantMask ^= 2, tBias.y = 3.f * tCoef.y - tBias.y;
+	if (ray.d.z > 0.f) octantMask ^= 4, tBias.z = 3.f * tCoef.z - tBias.z;
+
+	// curTMin & curTMax
+	float curTMin;
+	float curTMax;
+	{
+		curTMin = max(max(2.f * tCoef.x - tBias.x, 2.f * tCoef.y - tBias.y), 2.f * tCoef.z - tBias.z);
+		curTMax = min(min(tCoef.x - tBias.x, tCoef.y - tBias.y), tCoef.z - tBias.z);
+		curTMin = max(curTMin, 0.f);
+		curTMax = min(curTMax, 1.f);
+	}
+
+	// Init iterative variables
+	uint curNode = 0;
+	float curScale = 0.5f;
+	int curScaleIndex = int(maxLevels) - 1;
+	int curIterCount = 0;
+
+	// T in [0, 1]
+	// pos in [1, 2]
+
+	// Choose first child
+	uint curChildIndex = 0;
+	vec3 curCorner = vec3(1.f, 1.f, 1.f);
+	{
+		if (curTMin < 1.5f * tCoef.x - tBias.x) curChildIndex ^= 1, curCorner.x = 1.5f;
+		if (curTMin < 1.5f * tCoef.y - tBias.y) curChildIndex ^= 2, curCorner.y = 1.5f;
+		if (curTMin < 1.5f * tCoef.z - tBias.z) curChildIndex ^= 4, curCorner.z = 1.5f;
+	}
+
+	vec3 tCurPos = tBias;
+
+	//-------------------------------------------------------
+	// ITERATE
+	//-------------------------------------------------------
+	while (curScaleIndex < maxLevels)
+	{
+		// Useful because sometimes it seems that it gets stuck and crashes the driver.
+		// Should be investigated though because there is no reason it could not escape, 
+		// probably some mishandled singularity somewhere.
+		if (curIterCount++ == 1024)
+			break;
+
+		const uint nodeData = GetTLASNode(curNode);
+
+		// Find max t value
+		const vec3 tCorner = curCorner * tCoef - tBias;
+		const float tCornerMax = min(min(tCorner.x, tCorner.y), tCorner.z);
+
+		// Permute child slots based on the mirroring
+		const uint childShift = curChildIndex ^ octantMask;
+		const uint childMask = nodeData << childShift;
+
+		// Process voxel?
+		if (((childMask & 0x80) != 0) && curTMin <= curTMax)
+		{
+			//-------------------------------------------------------
+			// INTERSECT
+			//-------------------------------------------------------
+			const float tVoxelMax = min(curTMax, tCornerMax);
+
+			const float halfScale = curScale * 0.5f;
+			const vec3 tCenter = halfScale * tCoef + tCorner;
+
+			if (curTMin <= tVoxelMax)
+			{
+				//-------------------------------------------------------
+				// PUSH
+				//-------------------------------------------------------
+				nodeStack[curScaleIndex] = curNode;
+				tMaxStack[curScaleIndex] = curTMax;
+
+				// Find child voxNode
+				curNode = GetTLASNode(curNode + CountBits8(childMask & 0xff));
+
+				if (~curNode == 0)
+				{
+					//result._t = curTMin;
+					//result._normal = normalize(vec3(1, 0.2, 0.8));
+					Ray localRay;
+					localRay.o = originalRay.o + curTMin * originalRay.d * originalRay._maxDist;
+					localRay.d = originalRay.d;
+					localRay._maxDist = halfScale * 4.0f;
+					CastContent(localRay, result);
+					return;
+				}
+				else
+				{
+					// Select child voxel that the ray enters first.
+
+					curChildIndex = 0;
+					--curScaleIndex;
+
+					curScale = halfScale;
+
+					if (tCenter.x > curTMin) curChildIndex ^= 1, curCorner.x += curScale;
+					if (tCenter.y > curTMin) curChildIndex ^= 2, curCorner.y += curScale;
+					if (tCenter.z > curTMin) curChildIndex ^= 4, curCorner.z += curScale;
+
+					curTMax = tVoxelMax;
+					continue;
+				}
+			}
+		}
+
+		//-------------------------------------------------------
+		// ADVANCE
+		//-------------------------------------------------------
+		// Step along the ray.
+		uint stepMask = 0;
+		{
+			if (tCorner.x <= tCornerMax) stepMask ^= 1, curCorner.x -= curScale;
+			if (tCorner.y <= tCornerMax) stepMask ^= 2, curCorner.y -= curScale;
+			if (tCorner.z <= tCornerMax) stepMask ^= 4, curCorner.z -= curScale;
+		}
+
+		// Update active t-span and flip bits of the child slot index.
+		curTMin = tCornerMax;
+		curChildIndex ^= stepMask;
+
+		// Proceed with pop if the bit flips disagree with the ray direction.
+		if ((curChildIndex & stepMask) != 0)
+		{
+			//-------------------------------------------------------
+			// POP
+			//-------------------------------------------------------
+
+			// Find the highest differing bit between the new pos and old pos.
+			uint differingBits = 0;
+			if ((stepMask & 1) != 0) differingBits |= floatBitsToInt(curCorner.x) ^ floatBitsToInt(curCorner.x + curScale);
+			if ((stepMask & 2) != 0) differingBits |= floatBitsToInt(curCorner.y) ^ floatBitsToInt(curCorner.y + curScale);
+			if ((stepMask & 4) != 0) differingBits |= floatBitsToInt(curCorner.z) ^ floatBitsToInt(curCorner.z + curScale);
+
+			curScaleIndex = (floatBitsToInt(float(differingBits)) >> 23) - 127; // position of the highest bit
+			curScale = intBitsToFloat((curScaleIndex - int(maxLevels) + 127) << 23); // exp2f(scale - s_max)
+
+			// Hack
+			if (curScaleIndex < 0 || curScaleIndex >= maxLevels)
+			{
+				curTMin = -4.f;
+				break;
+			}
+
+			// Restore the parent node from the stack. 
+			curNode = nodeStack[curScaleIndex];
+			curTMax = tMaxStack[curScaleIndex];
+
+			// Round cube position and extract child slot index.
+			const int shx = floatBitsToInt(curCorner.x) >> curScaleIndex;
+			const int shy = floatBitsToInt(curCorner.y) >> curScaleIndex;
+			const int shz = floatBitsToInt(curCorner.z) >> curScaleIndex;
+			curCorner.x = intBitsToFloat(shx << curScaleIndex);
+			curCorner.y = intBitsToFloat(shy << curScaleIndex);
+			curCorner.z = intBitsToFloat(shz << curScaleIndex);
+			curChildIndex = ((shz & 1) << 2) | ((shy & 1) << 1) | (shx & 1);
+		}
+	}
+
+	// Indicate miss if we are outside the octree.
+	//if (curScaleIndex >= maxLevels)
+	//{
+	//	curTMin = -4.f;
+	//}
+
+	// Undo mirroring of the coordinate system.
+	/*if ((octantMask & 1) == 0) curCorner.x = 1.f - curCorner.x;
+	if ((octantMask & 2) == 0) curCorner.y = 1.f - curCorner.y;
+	if ((octantMask & 4) == 0) curCorner.z = 1.f - curCorner.z;*/
+	// 	if ((octantMask & 1) != 0) curCorner.x = 3.0f - curScale - curCorner.x;
+	// 	if ((octantMask & 2) != 0) curCorner.y = 3.0f - curScale - curCorner.y;
+	// 	if ((octantMask & 4) != 0) curCorner.z = 3.0f - curScale - curCorner.z;
+}
+
 void CastGlobal(in Ray ray, inout CastResult result)
 {
 	result._t = ray._maxDist;
-
-	vec3 sphereCenter = vec3(0, 0, -10);
-	float sphereRadius = 1.0f;
-
-	CastSphere(ray, sphereCenter, sphereRadius, result);
-	CastTerrain(ray, result);
+	CastTLAS(ray, result);
 }
 
 bool TestObstruction(vec3 pos, vec3 dir)

@@ -1163,7 +1163,7 @@ bool Renderer::UpdateTLAS()
     const SparseOctree* octree = world->GetTLAS();
     VO_TRY(octree);
     const uint32 dataSize = octree->GetDataSize();
-    void* stagingPtr = _buffers->AllocateInStaging(Buffers::BufferID::TLAS_LEAVES, 0, dataSize);
+    void* stagingPtr = _buffers->AllocateInStaging(Buffers::BufferID::TLAS_NODES, 0, dataSize);
     VO_TRY(stagingPtr);
     memcpy(stagingPtr, octree->GetData(), dataSize);
     return true;

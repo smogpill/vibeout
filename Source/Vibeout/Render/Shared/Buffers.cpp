@@ -80,8 +80,10 @@ bool Buffers::Init()
 			setup._size = sizeof(GlobalUniformBuffer);
 			setup._usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			bool result;
-			_deviceBuffers[(int)BufferID::UNIFORM] = new Buffer(_renderer, setup, result);
+			Buffer* buffer = new Buffer(_renderer, setup, result);
+			_deviceBuffers[(int)BufferID::UNIFORM] = buffer;
 			VO_TRY(result);
+			_renderer.SetObjectName(buffer->GetBuffer(), "Uniform");
 		}
 
 		// TLAS Nodes
@@ -89,8 +91,10 @@ bool Buffers::Init()
 			setup._size = 128 * 1024 * 1024; // TODO
 			setup._usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			bool result;
-			_deviceBuffers[(int)BufferID::TLAS_NODES] = new Buffer(_renderer, setup, result);
+			Buffer* buffer = new Buffer(_renderer, setup, result);
+			_deviceBuffers[(int)BufferID::TLAS_NODES] = buffer;
 			VO_TRY(result);
+			_renderer.SetObjectName(buffer->GetBuffer(), "TLAS Nodes");
 		}
 
 		// TLAS Leaves
@@ -98,8 +102,10 @@ bool Buffers::Init()
 			setup._size = 128 * 1024 * 1024; // TODO
 			setup._usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			bool result;
-			_deviceBuffers[(int)BufferID::TLAS_LEAVES] = new Buffer(_renderer, setup, result);
+			Buffer* buffer = new Buffer(_renderer, setup, result);
+			_deviceBuffers[(int)BufferID::TLAS_LEAVES] = buffer;
 			VO_TRY(result);
+			_renderer.SetObjectName(buffer->GetBuffer(), "TLAS Leaves");
 		}
 	}
 
@@ -114,11 +120,13 @@ bool Buffers::Init()
 		setup._memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		setup._size = stagingBufferSize;
 
+		uint index = 0;
 		for (Buffer*& buffer : _stagingBuffers)
 		{
 			bool result;
 			buffer = new Buffer(_renderer, setup, result);
 			VO_TRY(result);
+			_renderer.SetObjectName(buffer->GetBuffer(), std::format("StagingBuffer{}", index++).c_str());
 		}
 	}
 
