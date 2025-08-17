@@ -96,6 +96,8 @@ private:
 	void EndRender();
 
 	bool UpdateUBO();
+	bool UpdateWorldIfNeeded();
+	bool UpdateTLAS();
 
 	auto BeginCommandBuffer(CommandBufferGroup& group) -> VkCommandBuffer;
 	bool SubmitCommandBuffer(VkCommandBuffer cmd_buf, VkQueue queue, int wait_semaphore_count, VkSemaphore* wait_semaphores,
@@ -194,4 +196,8 @@ private:
 	Bloom* _bloom = nullptr;
 	ToneMapping* _toneMapping = nullptr;
 	Draw* _draw = nullptr;
+
+	// World
+	//----------------------------
+	uint32 _lastWorldVersion = (uint32)-1;
 };

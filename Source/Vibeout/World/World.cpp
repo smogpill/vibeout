@@ -16,7 +16,7 @@ World::World(const char* name, bool& result)
 
 World::~World()
 {
-	delete _octree;
+	delete _tlas;
 	delete _heightmap;
 }
 
@@ -29,7 +29,7 @@ bool World::Init()
 	VO_TRY(result);
 	WorldDescriber describer(*this);
 	SparseOctreeBuilder builder;
-	_octree = builder.Build(8, describer);
-	VO_TRY(_octree);
+	_tlas = builder.Build(8, describer);
+	VO_TRY(_tlas);
 	return true;
 }

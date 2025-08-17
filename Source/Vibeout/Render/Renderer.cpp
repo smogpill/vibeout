@@ -16,6 +16,8 @@
 #include "Vibeout/Render/Post/Bloom.h"
 #include "Vibeout/Render/Post/ToneMapping.h"
 #include "Vibeout/Render/Post/Draw.h"
+#include "Vibeout/World/World.h"
+#include "Vibeout/World/Acceleration/SparseOctree/SparseOctree.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -805,6 +807,7 @@ bool Renderer::RenderContent()
     VO_ASSERT(!_frameReady);
 
     VO_TRY(UpdateUBO());
+    VO_TRY(UpdateWorldIfNeeded());
 
     const uint32 previousFrameInFlight = _currentFrameInFlight ? (_currentFrameInFlight - 1) : (maxFramesInFlight - 1);
     VkSemaphore transfer_semaphores = _semaphoreGroups[_currentFrameInFlight]._transferFinished;
@@ -1135,6 +1138,34 @@ bool Renderer::UpdateUBO()
     GlobalUniformBuffer* ubo = reinterpret_cast<GlobalUniformBuffer*>(_buffers->AllocateInStaging(Buffers::BufferID::UNIFORM, 0, sizeof(GlobalUniformBuffer)));
     VO_TRY(ubo);
     *ubo = *_ubo;
+    return true;
+}
+
+bool Renderer::UpdateWorldIfNeeded()
+{
+    World* world = _game.GetWorld();
+    VO_TRY(world);
+    const uint32 worldVersion = world->GetVersion();
+    if (worldVersion == _lastWorldVersion)
+        return true;
+    
+    VO_TRY(UpdateTLAS());
+
+    _lastWorldVersion = worldVersion;
+    return true;
+}
+
+bool Renderer::UpdateTLAS()
+{
+    VO_ASSERT(_buffers);
+    World* world = _game.GetWorld();
+    VO_TRY(world);
+    const SparseOctree* octree = world->GetTLAS();
+    VO_TRY(octree);
+    const uint32 dataSize = octree->GetDataSize();
+    void* stagingPtr = _buffers->AllocateInStaging(Buffers::BufferID::TLAS_LEAVES, 0, dataSize);
+    VO_TRY(stagingPtr);
+    memcpy(stagingPtr, octree->GetData(), dataSize);
     return true;
 }
 
