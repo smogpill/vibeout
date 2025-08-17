@@ -13,6 +13,7 @@ public:
 
 	auto GetPath() const -> const std::string& { return _path; }
 	auto GetHeightmap() const -> const Heightmap* { return _heightmap; }
+	auto GetVersion() const { return _version; }
 
 private:
 	bool Init();
@@ -21,4 +22,5 @@ private:
 	std::string _path;
 	Heightmap* _heightmap = nullptr;
 	SparseOctree* _octree = nullptr;
+	uint32 _version = 0;
 };

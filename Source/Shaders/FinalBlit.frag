@@ -30,8 +30,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 layout(constant_id = 0) const uint spec_final_blit_filter_lanczos = 0;
 
-#define GLOBAL_UBO_DESC_SET_IDX 0
-#include "GlobalUBO.h"
+#define GLOBAL_STORAGE_DESC_SET_IDX 0
+#include "GlobalStorage.h"
 
 layout(push_constant, std430) uniform PushConstants 
 {

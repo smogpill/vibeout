@@ -103,8 +103,6 @@ void SparseOctreeBuilder::BuildOctree(uint32 nbLevels, const Describer& describe
 
 SparseOctree* SparseOctreeBuilder::Encode()
 {
-	if (_nbNodes == 0)
-		return nullptr;
 	std::vector<uint32> compressedNodes;
 
 	compressedNodes.reserve(_nbNodes);

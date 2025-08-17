@@ -3,14 +3,11 @@
 #extension GL_GOOGLE_include_directive : enable 
 #extension GL_EXT_nonuniform_qualifier : enable
 
-#define GLOBAL_UBO_DESC_SET_IDX 0
-#include "GlobalUBO.h"
+#define GLOBAL_STORAGE_DESC_SET_IDX 0
+#include "GlobalStorage.h"
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "GlobalTextures.h"
-
-#define GLOBAL_STORAGE_DESC_SET_IDX 2
-#include "GlobalStorage.h"
 
 #include "Base.glsl"
 #include "Compression.glsl"

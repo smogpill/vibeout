@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Vibeout/Render/Shared/Base.h"
-#include "Shaders/GlobalUBO.h"
+#include "Shaders/GlobalStorage.h"
 class Buffer;
 class Renderer;
 

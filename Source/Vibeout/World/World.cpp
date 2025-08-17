@@ -30,5 +30,6 @@ bool World::Init()
 	WorldDescriber describer(*this);
 	SparseOctreeBuilder builder;
 	_octree = builder.Build(8, describer);
+	VO_TRY(_octree);
 	return true;
 }
