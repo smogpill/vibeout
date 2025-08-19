@@ -13,6 +13,7 @@ function SetProjectDefaults(name)
 	targetdir("$(SolutionDir)$(Platform)/$(Configuration)")
 	libdirs { "$(OutDir)" }
 	includedirs("..")
+	includedirs(externDir)
 
 	debugdir "$(OutDir)"
 	configurations { "Debug", "Release" }

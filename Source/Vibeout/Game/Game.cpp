@@ -6,6 +6,9 @@
 #include "Vibeout/World/World.h"
 #include "Vibeout/Game/Camera/Camera.h"
 
+// Temp
+#include "Vibeout/Data/Model.h"
+
 const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 
 Game::Game()
@@ -13,6 +16,8 @@ Game::Game()
 {
 	// Spawn pos
 	_camera->SetTranslation(glm::dvec3(0, 2, 0));
+
+	_model = Model::Load("Assets/Big/Models/Feisar/feisar_prototype.obj");
 }
 Game::~Game()
 {

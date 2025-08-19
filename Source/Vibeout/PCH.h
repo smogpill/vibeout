@@ -27,6 +27,7 @@
 #include <format>
 #include <utility>
 #include <filesystem>
+#include <memory>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <SDL3/SDL_mouse.h>
@@ -35,6 +36,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vk_mem_alloc.h>
 #include <stb_image.h>
+#include <tinyobjloader/tiny_obj_loader.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>

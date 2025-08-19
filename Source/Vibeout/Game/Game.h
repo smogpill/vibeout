@@ -5,6 +5,9 @@
 #include "Vibeout/Game/GameBase.h"
 class Map; class Craft; class World; class Camera;
 
+// Temp
+class Model;
+
 class Game
 {
 public:
@@ -31,4 +34,8 @@ private:
 	Camera* _camera = nullptr;
 	float _deltaTime = 0.0f;
 	float _fixedUpdateAccumulator = 0.0f;
+	
+
+	// Temp
+	Model* _model = nullptr;
 };
