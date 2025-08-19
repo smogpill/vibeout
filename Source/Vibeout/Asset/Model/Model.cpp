@@ -3,34 +3,38 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "Model.h"
+#include "Vibeout/Data/Material.h"
 
-struct IndexHash
+namespace
 {
-    size_t operator()(const tinyobj::index_t& index) const
+    struct IndexHash
     {
-        size_t h1 = std::hash<int>{}(index.vertex_index);
-        size_t h2 = std::hash<int>{}(index.normal_index);
-        size_t h3 = std::hash<int>{}(index.texcoord_index);
-        return h1 ^ (h2 << 1) ^ (h3 << 2);
-    }
-};
+        size_t operator()(const tinyobj::index_t& index) const
+        {
+            size_t h1 = std::hash<int>{}(index.vertex_index);
+            size_t h2 = std::hash<int>{}(index.normal_index);
+            size_t h3 = std::hash<int>{}(index.texcoord_index);
+            return h1 ^ (h2 << 1) ^ (h3 << 2);
+        }
+    };
 
-struct IndexEqual
-{
-    bool operator()(const tinyobj::index_t& a, const tinyobj::index_t& b) const
+    struct IndexEqual
     {
-        return a.vertex_index == b.vertex_index &&
-            a.normal_index == b.normal_index &&
-            a.texcoord_index == b.texcoord_index;
-    }
-};
+        bool operator()(const tinyobj::index_t& a, const tinyobj::index_t& b) const
+        {
+            return a.vertex_index == b.vertex_index &&
+                a.normal_index == b.normal_index &&
+                a.texcoord_index == b.texcoord_index;
+        }
+    };
 
-Model::~Model()
-{
+    using VertexMap = std::unordered_map<tinyobj::index_t, uint32, IndexHash, IndexEqual>;
 }
 
-Model* Model::Load(const char* path)
+void Model::OnLoad(const char* path)
 {
+    Base::OnLoad(path);
+
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> inputShapes;
     std::vector<tinyobj::material_t> inputMaterials;
@@ -42,10 +46,16 @@ Model* Model::Load(const char* path)
         VO_ERROR("Failed to load: {}: ", path, errorMsg);
         return nullptr;
     }
-    
-    std::unordered_map<tinyobj::index_t, uint32, IndexHash, IndexEqual> vertexMap;
 
     std::unique_ptr<Model> model(new Model());
+
+    for (const tinyobj::material_t& inputMaterial : inputMaterials)
+    {
+        model->_materials.emplace_back(Material::LoadFromObj(inputMaterial));
+    }
+    
+    VertexMap vertexMap;
+   
     model->_shapes.resize(inputShapes.size());
     for (int i = 0; i < inputShapes.size(); ++i)
     {

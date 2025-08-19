@@ -2,14 +2,16 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
+#include "Vibeout/Asset/Asset.h"
 class Material;
 
-class Model
+class Model : public Asset
 {
+	using Base = Asset;
 public:
-	~Model();
-
-	static Model* Load(const char* path);
+	
+protected:
+	void OnLoad(const char* path) override;
 
 private:
 	struct Vertex
@@ -25,5 +27,5 @@ private:
 
 	std::vector<Vertex> _vertices;
 	std::vector<Shape> _shapes;
-	std::shared_ptr<Material> _material;
+	std::vector<std::shared_ptr<Material>> _materials;
 };
