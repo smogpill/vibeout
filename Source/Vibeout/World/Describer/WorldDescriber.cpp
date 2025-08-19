@@ -28,9 +28,10 @@ auto WorldDescriber::OverlapsNormalizedAABB(const AABB& aabb) const -> OverlapTy
 			maxY = std::max(data[index + x], maxY);
 		}
 	}
-	if ((aabb.Min().y * size.y) <= maxY)
+	const float relativeMaxY = (float)maxY / size.y;
+	if ((aabb.Min().y) <= relativeMaxY)
 	{
-		if ((aabb.Max().y * size.y) <= maxY)
+		if ((aabb.Max().y) <= relativeMaxY)
 			return OverlapType::INTERIOR;
 		else
 			return OverlapType::INTERSECTION;

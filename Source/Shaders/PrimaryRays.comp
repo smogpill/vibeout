@@ -121,6 +121,7 @@ void main()
 
 		//vec4 transparent = alpha_blend(effects, vec4(env, 1));
 		vec4 color = vec4(skyColor, 1);
+		color.r += (castResult._nbTLASCells / 10.0) * 10.0f;
 
 		// Store an empty surface into the G-buffer
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
@@ -154,6 +155,8 @@ void main()
 		//primary_base_color = texture(TEX_TERRAIN_DIFFUSE, castResult._uv).rgb;
 		//primary_base_color = castResult._normal;
 	}
+
+	primary_base_color.r += (castResult._nbTLASCells / 10.0) * 10.0f;
 
 	vec3 throughput = primary_base_color;
 

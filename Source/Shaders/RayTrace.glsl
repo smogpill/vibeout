@@ -5,7 +5,7 @@
 const int maxLevels = 23;
 const float maxTraceDist = 1e6f;
 const float terrainSize = 10.0f;
-const float terrainHeightScale = 0.8f;
+const float terrainHeightScale = 1.0f;
 
 struct Ray
 {
@@ -20,6 +20,7 @@ struct CastResult
 	uint _objectID;
 	vec2 _uv;
 	vec3 _normal;
+	uint _nbTLASCells;
 };
 
 // Counts amount of bits in 8 bit int
@@ -81,11 +82,13 @@ bool RayAABBIntersection(vec3 rayOrigin, vec3 rayDir, vec3 aabbMin, vec3 aabbMax
 	return tMin <= tMax && tMax >= 0.0;
 }
 
-void CastTerrain(in Ray ray, inout CastResult result)
+bool CastTerrain(in Ray ray, inout CastResult result)
 {
 	float initialStepSize = 0.0001f;
-	vec3 localTerrainOrigin = vec3(-0.5f, 0.0f, -0.5f);
-	vec3 localOrigin = ray.o / terrainSize - localTerrainOrigin;
+	//vec3 localTerrainOrigin = vec3(-0.5f, 0.0f, -0.5f);
+	//vec3 localOrigin = ray.o / terrainSize - localTerrainOrigin;
+
+	vec3 localOrigin = ray.o / terrainSize;
 
 	// Compute intersection with the terrain AABB
 	float tMax;
@@ -123,7 +126,7 @@ void CastTerrain(in Ray ray, inout CastResult result)
 	}
 
 	if (t >= tMax)
-		return;
+		return false;
 
 	// Refine
 	float t0 = max(0.0, t - initialStepSize);
@@ -138,52 +141,51 @@ void CastTerrain(in Ray ray, inout CastResult result)
 		else t0 = t;
 	}
 
-	float globalT = t * terrainSize;
-	if (globalT < result._t)
-	{
-		// Final position and normal
-		vec3 hitPos = localOrigin + ray.d * t;
-		vec2 uv = clamp(hitPos.xz, 0.0, 1.0);
-		result._t = globalT;
-		result._normal = ComputeTerrainNormal(uv);
-		result._objectID = 0;
-		result._uv = uv;
-	}
+	// Final position and normal
+	vec3 hitPos = localOrigin + ray.d * t;
+	vec2 uv = clamp(hitPos.xz, 0.0, 1.0);
+	result._t = t * terrainSize;
+	result._normal = ComputeTerrainNormal(uv);
+	result._objectID = 0;
+	result._uv = uv;
+	return true;
 }
 
-void CastSphere(in Ray ray, in vec3 ce, float ra, inout CastResult result)
+bool CastSphere(in Ray ray, in vec3 ce, float ra, inout CastResult result)
 {
 	vec3 oc = ray.o - ce;
 	float b = dot(oc, ray.d);
 	float c = dot(oc, oc) - ra * ra;
 	float h = b * b - c;
 	if (h < 0.0)
-		return;
+		return false;
 	h = sqrt(h);
 	const float t = -b - h;
 	if (t < 0.0f)
-		return;
-	if (t < result._t)
-	{
-		result._t = t;
-		result._normal = normalize(ray.o + ray.d * t - ce);
-		result._objectID = 1;
-	}
+		return false;
+	if (t > ray._maxDist)
+		return false;
+	result._t = t;
+	result._normal = normalize(ray.o + ray.d * t - ce);
+	result._objectID = 1;
+	return true;
 }
 
-void CastContent(in Ray ray, inout CastResult result)
+bool CastContent(in Ray ray, inout CastResult result)
 {
-	vec3 sphereCenter = vec3(0, 0, -10);
-	float sphereRadius = 1.0f;
-	CastSphere(ray, sphereCenter, sphereRadius, result);
-	CastTerrain(ray, result);
+	//vec3 sphereCenter = vec3(0, 0, -10);
+	//float sphereRadius = 1.0f;
+	//CastSphere(ray, sphereCenter, sphereRadius, result);
+	//ray._maxDist = min(result._t, ray._maxDist);
+	return CastTerrain(ray, result);
 }
 
 void CastTLAS(in Ray ray, inout CastResult result)
 {
+	float scale = terrainSize;
+	const vec3 center = vec3(0.5f, 0.0f, 0.5f);
 	Ray originalRay = ray;
-	vec3 scale = vec3(terrainSize, terrainSize * terrainHeightScale, terrainSize);
-	ray.o /= scale;
+	ray.o = ray.o / scale + center;
 	ray.d *= ray._maxDist / scale;
 
 	//-------------------------------------------------------
@@ -281,14 +283,25 @@ void CastTLAS(in Ray ray, inout CastResult result)
 
 				if (~curNode == 0)
 				{
+					//vec3 chunkPos = curCorner;
+					///if ((octantMask & 1) == 0) chunkPos.x = 3.0f - curScale - chunkPos.x;
+					//if ((octantMask & 2) == 0) chunkPos.y = 3.0f - curScale - chunkPos.y;
+					//if ((octantMask & 4) == 0) chunkPos.z = 3.0f - curScale - chunkPos.z;
+
 					//result._t = curTMin;
 					//result._normal = normalize(vec3(1, 0.2, 0.8));
-					Ray localRay;
-					localRay.o = originalRay.o + curTMin * originalRay.d * originalRay._maxDist;
-					localRay.d = originalRay.d;
-					localRay._maxDist = halfScale * 4.0f;
-					CastContent(localRay, result);
-					return;
+					Ray localGlobalRay;
+					localGlobalRay.o = (ray.o + curTMin * ray.d) * scale;
+					//localRay.o = (ray.o - (chunkPos - vec3(1, 1, 1)))* scale;
+					localGlobalRay.d = originalRay.d;
+					//localGlobalRay._maxDist = (tVoxelMax - curTMin) * scale;
+					localGlobalRay._maxDist = halfScale * scale * 2.0f;
+					//++result._nbTLASCells;
+					if (CastContent(localGlobalRay, result))
+					{
+						result._t += length(localGlobalRay.o - originalRay.o);
+						break;
+					}
 				}
 				else
 				{
@@ -340,13 +353,6 @@ void CastTLAS(in Ray ray, inout CastResult result)
 			curScaleIndex = (floatBitsToInt(float(differingBits)) >> 23) - 127; // position of the highest bit
 			curScale = intBitsToFloat((curScaleIndex - int(maxLevels) + 127) << 23); // exp2f(scale - s_max)
 
-			// Hack
-			if (curScaleIndex < 0 || curScaleIndex >= maxLevels)
-			{
-				curTMin = -4.f;
-				break;
-			}
-
 			// Restore the parent node from the stack. 
 			curNode = nodeStack[curScaleIndex];
 			curTMax = tMaxStack[curScaleIndex];
@@ -362,12 +368,6 @@ void CastTLAS(in Ray ray, inout CastResult result)
 		}
 	}
 
-	// Indicate miss if we are outside the octree.
-	//if (curScaleIndex >= maxLevels)
-	//{
-	//	curTMin = -4.f;
-	//}
-
 	// Undo mirroring of the coordinate system.
 	/*if ((octantMask & 1) == 0) curCorner.x = 1.f - curCorner.x;
 	if ((octantMask & 2) == 0) curCorner.y = 1.f - curCorner.y;
@@ -380,6 +380,7 @@ void CastTLAS(in Ray ray, inout CastResult result)
 void CastGlobal(in Ray ray, inout CastResult result)
 {
 	result._t = ray._maxDist;
+	result._nbTLASCells = 0;
 	CastTLAS(ray, result);
 }
 
