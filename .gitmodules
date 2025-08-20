@@ -14,3 +14,6 @@
 [submodule "Extern/tinyobjloader"]
 	path = Extern/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "Extern/JoltPhysics"]
+	path = Extern/JoltPhysics
+	url = https://github.com/jrouwe/JoltPhysics.git
