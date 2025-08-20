@@ -8,5 +8,5 @@ class Asset
 public:
 	virtual ~Asset() = default;
 
-	virtual void Load(const char* path);
+	virtual void OnLoad(const char* path) {}
 };

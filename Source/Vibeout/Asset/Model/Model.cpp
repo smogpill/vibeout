@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "Model.h"
-#include "Vibeout/Data/Material.h"
+#include "Vibeout/Asset/Material/Material.h"
 
 namespace
 {
@@ -44,23 +44,21 @@ void Model::OnLoad(const char* path)
     if (!tinyobj::LoadObj(&attrib, &inputShapes, &inputMaterials, &warningMsg, &errorMsg, path))
     {
         VO_ERROR("Failed to load: {}: ", path, errorMsg);
-        return nullptr;
+        return;
     }
-
-    std::unique_ptr<Model> model(new Model());
 
     for (const tinyobj::material_t& inputMaterial : inputMaterials)
     {
-        model->_materials.emplace_back(Material::LoadFromObj(inputMaterial));
+        _materials.emplace_back(Material::LoadFromObj(inputMaterial));
     }
     
     VertexMap vertexMap;
    
-    model->_shapes.resize(inputShapes.size());
+    _shapes.resize(inputShapes.size());
     for (int i = 0; i < inputShapes.size(); ++i)
     {
         const auto& inputShape = inputShapes[i];
-        Shape& shape = model->_shapes[i];
+        Shape& shape = _shapes[i];
         const tinyobj::mesh_t& mesh = inputShape.mesh;
         shape._indices.resize(mesh.indices.size());
         for (int i = 0; i < mesh.indices.size(); ++i)
@@ -70,9 +68,9 @@ void Model::OnLoad(const char* path)
             uint32 vertexIdx;
             if (it == vertexMap.end())
             {
-                vertexIdx = (uint32)model->_vertices.size();
+                vertexIdx = (uint32)_vertices.size();
                 vertexMap[index] = vertexIdx;
-                Vertex& vertex = model->_vertices.emplace_back();
+                Vertex& vertex = _vertices.emplace_back();
                 if (index.vertex_index >= 0)
                 {
                     vertex._pos[0] = attrib.vertices[3 * index.vertex_index + 0];
@@ -98,6 +96,4 @@ void Model::OnLoad(const char* path)
             shape._indices[i] = vertexIdx;
         }
     }
-   
-	return model.release();
 }
