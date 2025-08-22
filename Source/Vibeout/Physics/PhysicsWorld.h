@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Vibeout/Physics/Base/PhysicsBase.h"
+#include "Vibeout/Base/Singleton.h"
 
 namespace JPH
 {
@@ -12,7 +13,7 @@ namespace JPH
 	class ObjectVsBroadPhaseLayerFilter;
 }
 
-class PhysicsWorld
+class PhysicsWorld : public Singleton<PhysicsWorld>
 {
 public:
 	PhysicsWorld();

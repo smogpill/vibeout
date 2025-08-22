@@ -5,6 +5,7 @@
 #include <SDL3/SDL_main.h>
 #include "Game/Game.h"
 #include "Render/Renderer.h"
+#include "Physics/PhysicsWorld.h"
 
 void ToggleFullscreen(SDL_Window* window)
 {
@@ -38,6 +39,7 @@ int main(int argc, char* argv[])
     }
 
     {
+        PhysicsWorld physicsWorld;
         Game game;
         game.SetWorld("Rugged");
 

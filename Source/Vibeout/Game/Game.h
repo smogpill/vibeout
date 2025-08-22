@@ -3,12 +3,13 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Vibeout/Game/GameBase.h"
+#include "Vibeout/Base/Singleton.h"
 class Map; class Craft; class World; class Camera;
 
 // Temp
 class Model;
 
-class Game
+class Game : public Singleton<Game>
 {
 public:
 	Game();
@@ -22,6 +23,8 @@ public:
 	const GameState& GetState() const { return _state; }
 	void OnMouseMotion(float xrel, float yrel);
 	World* GetWorld() const { return _world; }
+
+	static inline Game* _instance = nullptr;
 
 private:
 	void FixedUpdate(float deltaTime);
