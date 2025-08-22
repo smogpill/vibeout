@@ -65,6 +65,9 @@ end
 workspace "Vibeout"
 	configurations { "Debug", "Release" }
 	location "Workspaces"
+	
+	include "../Source/Vibeout"
+	include "../Source/Shaders"
 
 	externalproject "SDL"
 	   	location "../Extern/SDL3/VisualC/SDL"
@@ -74,6 +77,5 @@ workspace "Vibeout"
 	   	architecture "x64"
 	   	objdir(path.join(buildDir, "Obj"))
 		targetdir(path.join(buildDir, "Bin/$(Configuration)"))
-	
-	include "../Source/Vibeout"
-	include "../Source/Shaders"
+
+	--startproject "Vibeout" does not seem to work
