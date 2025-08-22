@@ -21,3 +21,12 @@ includedirs { path.join(externDir, "VulkanMemoryAllocator/include") }
 
 -- STB
 includedirs { path.join(externDir, "stb") }
+
+-- JoltPhysics
+includedirs { path.join(externDir, "JoltPhysics")}
+links { "Jolt" }
+filter { "configurations:Debug" }
+libdirs { path.join(externDir, "JoltPhysics/Build/VS2022_CL_Double/Debug") }
+filter { "configurations:Release" }
+libdirs { path.join(externDir, "JoltPhysics/Build/VS2022_CL_Double/Release") }
+filter {}

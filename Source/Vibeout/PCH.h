@@ -28,15 +28,21 @@
 #include <utility>
 #include <filesystem>
 #include <memory>
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_keyboard.h>
+
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
+
 #include <vk_mem_alloc.h>
+
 #include <stb_image.h>
+
 #include <tinyobjloader/tiny_obj_loader.h>
+
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -50,5 +56,18 @@
 #include <glm/ext/quaternion_common.hpp>
 #include <glm/ext/vector_double3.hpp>
 #include <glm/gtc/quaternion.hpp>
+
 #include <Windows.h>
+
+#define JPH_DISABLE_CUSTOM_ALLOCATOR
+#include <Jolt/Jolt.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Core/Memory.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Collision/ObjectLayer.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+
 #include "Base/Base.h"
