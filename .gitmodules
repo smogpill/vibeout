@@ -17,3 +17,6 @@
 [submodule "Extern/JoltPhysics"]
 	path = Extern/JoltPhysics
 	url = https://github.com/jrouwe/JoltPhysics.git
+[submodule "Extern/tinybvh"]
+	path = Extern/tinybvh
+	url = https://github.com/jbikker/tinybvh.git
