@@ -28,7 +28,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MATERIAL_UINTS          6
 
 // should match the same constant declared in material.h
-#define MAX_PBR_MATERIALS      4096
+#define MAX_PBR_MATERIALS       4096
+
+#define MAX_MATRICES        32768
 
 #define ALIGN_SIZE_4(x, n)  ((x * n + 3) & (~3))
 
@@ -36,7 +38,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define POSITION_BUFFER_BINDING_IDX 1
 #define LIGHT_BUFFER_BINDING_IDX 2
 #define LIGHT_COUNTS_HISTORY_BUFFER_BINDING_IDX 3
-#define IQM_MATRIX_BUFFER_BINDING_IDX 4
+#define MATRIX_BUFFER_BINDING_IDX 4
 #define READBACK_BUFFER_BINDING_IDX 5
 #define TONE_MAPPING_BUFFER_BINDING_IDX 6
 #define SUN_COLOR_BUFFER_BINDING_IDX 7
@@ -83,6 +85,11 @@ struct VboPrimitive
 	uvec2 custom2;
 };
 
+struct MatrixBuffer
+{
+	vec4 _matrices[MAX_MATRICES * 3];
+};
+
 struct ToneMappingBuffer
 {
 	int accumulator[HISTOGRAM_BINS];
@@ -124,15 +131,34 @@ struct MaterialInfo
 	uint next_frame;
 };
 
-layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = READBACK_BUFFER_BINDING_IDX) buffer READBACK_BUFFER {
+// The buffers with primitive data, currently two of them: world and instanced.
+// They are stored in an array to allow branchless access with nonuniformEXT.
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = PRIMITIVE_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer PRIMITIVE_BUFFER
+{
+	VboPrimitive primitives[];
+} primitive_buffers[];
+
+// The buffer with just the position data for animated models.
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer POSITION_BUFFER
+{
+	float positions[];
+} instanced_position_buffer;
+
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = MATRIX_BUFFER_BINDING_IDX) readonly buffer MATRIX_BUFFER
+{
+	MatrixBuffer _matrixBuffer;
+};
+
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = READBACK_BUFFER_BINDING_IDX) buffer READBACK_BUFFER
+{
 	ReadbackBuffer readback;
 };
 
-layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = TONE_MAPPING_BUFFER_BINDING_IDX) buffer TONE_MAPPING_BUFFER {
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = TONE_MAPPING_BUFFER_BINDING_IDX) buffer TONE_MAPPING_BUFFER
+{
 	ToneMappingBuffer tonemap_buffer;
 };
 
-/*
 struct Triangle
 {
 	mat3x3 positions;
@@ -149,8 +175,85 @@ struct Triangle
 	float  alpha;
 };
 
-Triangle
-load_triangle(uint buffer_idx, uint prim_id)
+MaterialInfo get_material_info(uint material_id)
+{
+	/*
+	uint material_index = material_id & MATERIAL_INDEX_MASK;
+
+	uint data[MATERIAL_UINTS];
+	data[0] = light_buffer.material_table[material_index * MATERIAL_UINTS + 0];
+	data[1] = light_buffer.material_table[material_index * MATERIAL_UINTS + 1];
+	data[2] = light_buffer.material_table[material_index * MATERIAL_UINTS + 2];
+	data[3] = light_buffer.material_table[material_index * MATERIAL_UINTS + 3];
+	data[4] = light_buffer.material_table[material_index * MATERIAL_UINTS + 4];
+	data[5] = light_buffer.material_table[material_index * MATERIAL_UINTS + 5];
+
+	MaterialInfo minfo;
+	minfo.base_texture = data[0] & 0xffff;
+	minfo.normals_texture = data[0] >> 16;
+	minfo.emissive_texture = data[1] & 0xffff;
+	minfo.mask_texture = data[1] >> 16;
+	minfo.bump_scale = unpackHalf2x16(data[2]).x;
+	minfo.roughness_override = unpackHalf2x16(data[2]).y;
+	minfo.metalness_factor = unpackHalf2x16(data[3]).x;
+	minfo.emissive_factor = unpackHalf2x16(data[3]).y;
+	minfo.specular_factor = unpackHalf2x16(data[5]).x;
+	minfo.base_factor = unpackHalf2x16(data[5]).y;
+	minfo.num_frames = data[4] & 0xffff;
+	minfo.next_frame = (data[4] >> 16) & (MAX_PBR_MATERIALS - 1);
+
+	// Apply the light style for non-camera materials.
+	// Camera materials use the same bits to store the camera ID.
+	if ((material_id & MATERIAL_KIND_MASK) != MATERIAL_KIND_CAMERA)
+	{
+		uint light_style = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
+		if (light_style != 0)
+		{
+			minfo.emissive_factor *= light_buffer.light_styles[light_style];
+		}
+	}
+
+	return minfo;
+
+	*/
+
+	MaterialInfo info;
+	info.base_texture = 0;
+	info.normals_texture = 0;
+	info.emissive_texture = 0;
+	info.mask_texture = 0;
+	info.bump_scale = 0.0f;
+	info.roughness_override = 1.0f;
+	info.metalness_factor = 0.0f;
+	info.emissive_factor = 0.0f;
+	info.specular_factor = 0.0f;
+	info.base_factor = 1.0f;
+	info.light_style_scale;
+	info.num_frames = 1;
+	info.next_frame = 1;
+	return info;
+}
+
+uint animate_material(uint material, int frame)
+{
+	// Apply frame-based material animation: go through the linked list of materials.
+	if (frame > 0)
+	{
+		uint new_material = material;
+		MaterialInfo minfo = get_material_info(new_material);
+		frame = frame % int(minfo.num_frames);
+
+		while (frame-- > 0) {
+			new_material = minfo.next_frame;
+			minfo = get_material_info(new_material);
+		}
+
+		material = new_material | (material & ~MATERIAL_INDEX_MASK); // preserve flags
+	}
+	return material;
+}
+
+Triangle load_triangle(uint buffer_idx, uint prim_id)
 {
 	VboPrimitive prim = primitive_buffers[nonuniformEXT(buffer_idx)].primitives[prim_id];
 
@@ -188,8 +291,7 @@ load_triangle(uint buffer_idx, uint prim_id)
 	return t;
 }
 
-Triangle
-load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
+Triangle load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 {
 	Triangle t = load_triangle(buffer_idx, prim_id);
 
@@ -197,7 +299,7 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 	{
 		// Instance of a static mesh: transform the vertices.
 
-		ModelInstance mi = instance_buffer.model_instances[instance_idx];
+		ModelInstance mi = _instanceBuffer.model_instances[instance_idx];
 
 		t.positions[0] = vec3(mi.transform * vec4(t.positions[0], 1.0));
 		t.positions[1] = vec3(mi.transform * vec4(t.positions[1], 1.0));
@@ -235,7 +337,7 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 		// In this case, `instance_idx` is -1 because it's not a static mesh, 
 		// so load the original animated instance to find out its prim offset.
 
-		ModelInstance mi = instance_buffer.model_instances[t.instance_index];
+		ModelInstance mi = _instanceBuffer.model_instances[t.instance_index];
 		t.instance_prim = prim_id - mi.render_prim_offset;
 	}
 	else if (buffer_idx == VERTEX_BUFFER_WORLD)
@@ -250,8 +352,7 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 }
 
 #ifndef VERTEX_READONLY
-void
-store_triangle(Triangle t, uint buffer_idx, uint prim_id)
+void store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 {
 	VboPrimitive prim;
 
@@ -297,93 +398,14 @@ store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 }
 #endif
 
-MaterialInfo
-get_material_info(uint material_id)
-{
-	uint material_index = material_id & MATERIAL_INDEX_MASK;
-
-	uint data[MATERIAL_UINTS];
-	data[0] = light_buffer.material_table[material_index * MATERIAL_UINTS + 0];
-	data[1] = light_buffer.material_table[material_index * MATERIAL_UINTS + 1];
-	data[2] = light_buffer.material_table[material_index * MATERIAL_UINTS + 2];
-	data[3] = light_buffer.material_table[material_index * MATERIAL_UINTS + 3];
-	data[4] = light_buffer.material_table[material_index * MATERIAL_UINTS + 4];
-	data[5] = light_buffer.material_table[material_index * MATERIAL_UINTS + 5];
-
-	MaterialInfo minfo;
-	minfo.base_texture = data[0] & 0xffff;
-	minfo.normals_texture = data[0] >> 16;
-	minfo.emissive_texture = data[1] & 0xffff;
-	minfo.mask_texture = data[1] >> 16;
-	minfo.bump_scale = unpackHalf2x16(data[2]).x;
-	minfo.roughness_override = unpackHalf2x16(data[2]).y;
-	minfo.metalness_factor = unpackHalf2x16(data[3]).x;
-	minfo.emissive_factor = unpackHalf2x16(data[3]).y;
-	minfo.specular_factor = unpackHalf2x16(data[5]).x;
-	minfo.base_factor = unpackHalf2x16(data[5]).y;
-	minfo.num_frames = data[4] & 0xffff;
-	minfo.next_frame = (data[4] >> 16) & (MAX_PBR_MATERIALS - 1);
-
-	// Apply the light style for non-camera materials.
-	// Camera materials use the same bits to store the camera ID.
-	if ((material_id & MATERIAL_KIND_MASK) != MATERIAL_KIND_CAMERA)
-	{
-		uint light_style = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
-		if (light_style != 0)
-		{
-			minfo.emissive_factor *= light_buffer.light_styles[light_style];
-		}
-	}
-
-	return minfo;
-}
-
-uint
-animate_material(uint material, int frame)
-{
-	// Apply frame-based material animation: go through the linked list of materials.
-	if (frame > 0)
-	{
-		uint new_material = material;
-		MaterialInfo minfo = get_material_info(new_material);
-		frame = frame % int(minfo.num_frames);
-
-		while (frame-- > 0) {
-			new_material = minfo.next_frame;
-			minfo = get_material_info(new_material);
-		}
-
-		material = new_material | (material & ~MATERIAL_INDEX_MASK); // preserve flags
-	}
-	return material;
-}
-
-LightPolygon
-get_light_polygon(uint index)
-{
-	vec4 p0 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 0];
-	vec4 p1 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 1];
-	vec4 p2 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 2];
-	vec4 p3 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 3];
-
-	LightPolygon light;
-	light.positions = mat3x3(p0.xyz, p1.xyz, p2.xyz);
-	light.color = vec3(p0.w, p1.w, p2.w);
-	light.light_style_scale = p3.x;
-	light.prev_style_scale = p3.y;
-	return light;
-}
-
-mat3x4
-get_iqm_matrix(uint index)
+mat3x4 get_iqm_matrix(uint index)
 {
 	mat3x4 result;
-	result[0] = iqm_matrix_buffer.iqm_matrices[index * 3 + 0];
-	result[1] = iqm_matrix_buffer.iqm_matrices[index * 3 + 1];
-	result[2] = iqm_matrix_buffer.iqm_matrices[index * 3 + 2];
+	result[0] = _matrixBuffer._matrices[index * 3 + 0];
+	result[1] = _matrixBuffer._matrices[index * 3 + 1];
+	result[2] = _matrixBuffer._matrices[index * 3 + 2];
 	return result;
 }
-*/
 
 #endif
 #endif

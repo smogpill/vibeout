@@ -8,6 +8,51 @@ class Renderer;
 class Buffer;
 struct ReadbackBuffer;
 
+struct ModelGeometry
+{
+	uint8* geometry_storage = nullptr;
+	VkAccelerationStructureGeometryKHR* geometries = nullptr;
+	VkAccelerationStructureBuildRangeInfoKHR* build_ranges = nullptr;
+	uint32* prim_counts = nullptr;
+	uint32* prim_offsets = nullptr;
+	uint32 num_geometries = 0;
+	uint32 max_geometries = 0;
+	VkAccelerationStructureBuildSizesInfoKHR build_sizes = {};
+	VkDeviceSize blas_data_offset = {};
+	VkAccelerationStructureKHR accel = {};
+	VkDeviceAddress blas_device_address = {};
+	VkGeometryInstanceFlagsKHR instance_flags = 0;
+	uint32 instance_mask = 0;
+	uint32 sbt_offset = 0;
+};
+
+struct ModelVBO
+{
+	Buffer* _buffer = nullptr;
+	Buffer* _stagingBuffer = nullptr;
+	int registrationSequence = 0;
+	ModelGeometry _opaqueGeom;
+	ModelGeometry _transparentGeom;
+	ModelGeometry _maskedGeom;
+	uint64 _vertexDataOffset = 0;
+	uint32 _totalNbTris = 0;
+	bool _static = false;
+};
+
+struct Model
+{
+	ModelGeometry _geometry;
+};
+
+struct WorldData
+{
+	ModelGeometry _opaqueGeom;
+	ModelGeometry _transparentGeom;
+	ModelGeometry _maskedGeom;
+	std::vector<Model> _models;
+	uint64 _vertexDataOffset = 0;
+};
+
 class VertexBuffer
 {
 public:
@@ -20,11 +65,21 @@ public:
 	VkDescriptorSet GetDescSet() const { return _descSet; }
 	VkDescriptorSetLayout GetDescSetLayout() const { return _descSetLayout; }
 	Buffer* GetToneMapBuffer() const { return _toneMapBuffer; }
+	bool UploadWorld();
 
 private:
+	static constexpr uint32 s_maxNbModels = 8 * 1024;
+
+	/// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkAccelerationStructureCreateInfoKHR.html
+	static constexpr uint32 s_accelStructAlignment = 256;
+	
 	friend class ToneMapping;
 
 	bool Init();
+	bool SuballocateModelBlasMemory(ModelGeometry& geometry, uint64& vboSize, const char* name);
+	bool CreateModelBlas(ModelGeometry& info, VkBuffer buffer, const char* name);
+	bool BuildModelBlas(VkCommandBuffer cmds, ModelGeometry& info, uint64 first_vertex_offset, const Buffer& buffer);
+	bool CreatePrimitiveBuffer();
 
 	Renderer& _renderer;
 	VkDescriptorPool desc_pool_vertex_buffer = nullptr;
@@ -34,4 +89,13 @@ private:
 	Buffer* _readbackBuffer = nullptr;
 	Buffer* _stagingReadbackBuffers[maxFramesInFlight] = {};
 	Buffer* _toneMapBuffer = nullptr;
+	Buffer* _worldBuffer = nullptr;
+	Buffer* _matricesBuffer = nullptr;
+	Buffer* _stagingMatricesBuffers[maxFramesInFlight] = {};
+	Buffer* _instancedPrimitiveBuffer = nullptr;
+	Buffer* _instancedPositionsBuffer = nullptr;
+	Buffer* _accelScratchBuffer = nullptr;
+	uint32 _nbInstancedPrimitives = 1 << 20;
+	ModelVBO _modelVertexData[s_maxNbModels];
+	WorldData _worldData;
 };

@@ -4,10 +4,12 @@
 #ifndef GLOBAL_STORAGE_H
 #define GLOBAL_STORAGE_H
 #include "ShaderInterface.h"
+#include "SharedConstants.h"
 
 #define GLOBAL_UBO_BINDING_IDX 0
 #define GLOBAL_TLAS_NODES_BINDING_IDX 1
 #define GLOBAL_TLAS_LEAVES_BINDING_IDX 2
+#define GLOBAL_INSTANCE_BUFFER_BINDING_IDX 3
 
 #ifdef __cplusplus
 struct alignas(16) GlobalUniformBuffer
@@ -155,6 +157,44 @@ struct GlobalUniformBuffer
 	SHARED_STRUCT_ATTRIB(float, ui_hdr_nits, 300); /* HDR mode UI (stretch pic) brightness in nits */
 };
 
+struct ModelInstance
+{
+	mat4 transform;
+	mat4 transform_prev;
+
+	uint material;
+	uint shell;
+	int cluster;
+	uint source_buffer_idx;
+	uint prim_count;
+
+	uint prim_offset_curr_pose_curr_frame;
+	uint prim_offset_prev_pose_curr_frame;
+	uint prim_offset_curr_pose_prev_frame;
+	uint prim_offset_prev_pose_prev_frame;
+
+	float pose_lerp_curr_frame;
+	float pose_lerp_prev_frame;
+	int iqm_matrix_offset_curr_frame;
+	int iqm_matrix_offset_prev_frame;
+
+	/* Combined alpha value (half float stored low 16 bits)
+	 * and frame number (integer stored in high 16 bits) */
+	uint alpha_and_frame;
+	uint render_buffer_idx;
+	uint render_prim_offset;
+};
+
+struct InstanceBuffer
+{
+	uint            animated_model_indices[MAX_MODEL_INSTANCES];
+	uint            model_current_to_prev[MAX_MODEL_INSTANCES];
+	uint            model_prev_to_current[MAX_MODEL_INSTANCES];
+	ModelInstance   model_instances[MAX_MODEL_INSTANCES];
+	uint            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES];
+	int             tlas_instance_model_indices[MAX_TLAS_INSTANCES];
+};
+
 #ifndef __cplusplus
 layout(set = GLOBAL_STORAGE_DESC_SET_IDX, binding = GLOBAL_UBO_BINDING_IDX, std140) uniform UBO
 {
@@ -168,6 +208,10 @@ layout(set = GLOBAL_STORAGE_DESC_SET_IDX, binding = GLOBAL_TLAS_LEAVES_BINDING_I
 {
 	uint _data[];
 } inTLASLeaves;
+layout(set = GLOBAL_STORAGE_DESC_SET_IDX, binding = GLOBAL_INSTANCE_BUFFER_BINDING_IDX) readonly buffer InstanceSSBO
+{
+	InstanceBuffer _instanceBuffer;
+};
 #endif
 
 #endif
