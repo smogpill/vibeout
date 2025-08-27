@@ -7,6 +7,7 @@
 #include "Vibeout/Render/Buffer/Buffer.h"
 #include "Vibeout/Render/Shared/Utils.h"
 #include "Vibeout/Render/Shared/Buffers.h"
+#include "Vibeout/Base/Utils.h"
 
 VertexBuffer::VertexBuffer(Renderer& renderer, bool& result)
 	: _renderer(renderer)
@@ -263,7 +264,7 @@ bool VertexBuffer::UploadWorld()
 
 		for (int i = 0; i < _worldData._models.size(); i++)
 		{
-			Model& model = _worldData._models[i];
+			ModelDesc& model = _worldData._models[i];
 			VO_TRY(SuballocateModelBlasMemory(model._geometry, vboSize, std::format("Model{}", i).c_str()));
 		}
 	}
@@ -292,7 +293,7 @@ bool VertexBuffer::UploadWorld()
 		setup._usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		setup._memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		bool result;
-		stagingBuffer = std::make_unique<Buffer>(_renderer, stagingSize, result);
+		stagingBuffer = std::make_unique<Buffer>(_renderer, setup, result);
 		VO_TRY(result);
 	}
 
@@ -303,7 +304,7 @@ bool VertexBuffer::UploadWorld()
 
 		for (int i = 0; i < _worldData._models.size(); i++)
 		{
-			Model& model = _worldData._models[i];
+			ModelDesc& model = _worldData._models[i];
 			VO_TRY(CreateModelBlas(model._geometry, _worldBuffer->GetBuffer(), std::format("Model{}", i).c_str()));
 		}
 	}
@@ -311,12 +312,19 @@ bool VertexBuffer::UploadWorld()
 	uint8* stagingData = (uint8*)stagingBuffer->Map();
 	memcpy(stagingData, primitives.data(), nbPrimitives * sizeof(VboPrimitive));
 
+	auto vectorCopy = [](float* out, const float* in)
+		{
+			out[0] = in[0];
+			out[1] = in[1];
+			out[2] = in[2];
+		};
+
 	mat3* positions = (mat3*)(stagingData + _worldData._vertexDataOffset);
 	for (uint32 primIdx = 0; primIdx < nbPrimitives; ++primIdx)
 	{
-		VectorCopy(primitives[primIdx].pos0, positions[primIdx][0]);
-		VectorCopy(primitives[primIdx].pos1, positions[primIdx][1]);
-		VectorCopy(primitives[primIdx].pos2, positions[primIdx][2]);
+		vectorCopy(primitives[primIdx].pos0, positions[primIdx][0]);
+		vectorCopy(primitives[primIdx].pos1, positions[primIdx][1]);
+		vectorCopy(primitives[primIdx].pos2, positions[primIdx][2]);
 	}
 
 	stagingBuffer->Unmap();
@@ -328,13 +336,14 @@ bool VertexBuffer::UploadWorld()
 
 	vkCmdCopyBuffer(cmds, stagingBuffer->GetBuffer(), _worldBuffer->GetBuffer(), 1, &copyRegion);
 
-	BUFFER_BARRIER(cmds,
-		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
-		.buffer = _worldBuffer->GetBuffer(),
-		.offset = 0,
-		.size = VK_WHOLE_SIZE,
-		);
+	VkBufferMemoryBarrier barrier = BUFFER_BARRIER();
+	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+	barrier.buffer = _worldBuffer->GetBuffer();
+	barrier.offset = 0;
+	barrier.size = VK_WHOLE_SIZE;
+
+	QUEUE_BUFFER_BARRIER(cmds, barrier);
 
 	{
 		VO_TRY(BuildModelBlas(cmds, _worldData._opaqueGeom, _worldData._vertexDataOffset, *_worldBuffer));
@@ -355,7 +364,7 @@ bool VertexBuffer::UploadWorld()
 		bsp_mesh->geom_masked.sbt_offset = SBTO_MASKED;
 		*/
 
-		for (Model& model : _worldData._models)
+		for (ModelDesc& model : _worldData._models)
 		{
 			VO_TRY(BuildModelBlas(cmds, model._geometry, _worldData._vertexDataOffset, *_worldBuffer));
 
@@ -367,7 +376,7 @@ bool VertexBuffer::UploadWorld()
 		}
 	}
 
-	VO_TRY(_renderer.SubmitCommandBuffer(cmds, _renderer._graphicsQueue, 0, nullptr, nullptr, nullptr, 0, nullptr, nullptr, nullptr));
+	VO_TRY(_renderer.SubmitCommandBuffer(cmds, _renderer._graphicsQueue, 0, nullptr, nullptr, 0, nullptr, nullptr));
 
 	vkDeviceWaitIdle(device);
 
@@ -419,6 +428,9 @@ bool VertexBuffer::CreatePrimitiveBuffer()
 		setup._usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT 
 			| VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		setup._memProps = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		bool result;
+		_instancedPositionsBuffer = new Buffer(_renderer, setup, result);
+		VO_TRY(result);
 		_renderer.SetObjectName(_instancedPositionsBuffer->GetBuffer(), "Instanced positions");
 	}
 
@@ -472,7 +484,7 @@ bool VertexBuffer::SuballocateModelBlasMemory(ModelGeometry& info, uint64& vboSi
 		.pGeometries = info.geometries
 	};
 
-	vkGetAccelerationStructureBuildSizesKHR(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+	_renderer._vkGetAccelerationStructureBuildSizesKHR(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
 		&blasBuildinfo, info.prim_counts, &info.build_sizes);
 
 	if (info.build_sizes.buildScratchSize > _accelScratchBuffer->GetSize())
@@ -483,7 +495,7 @@ bool VertexBuffer::SuballocateModelBlasMemory(ModelGeometry& info, uint64& vboSi
 	}
 	else
 	{
-		vboSize = align(vboSize, s_accelStructAlignment);
+		vboSize = AlignUp<uint64>(vboSize, s_accelStructAlignment);
 
 		info.blas_data_offset = vboSize;
 		vboSize += info.build_sizes.accelerationStructureSize;
@@ -506,7 +518,7 @@ bool VertexBuffer::CreateModelBlas(ModelGeometry& info, VkBuffer buffer, const c
 	blasCreateInfo.offset = info.blas_data_offset;
 	blasCreateInfo.size = info.build_sizes.accelerationStructureSize;
 
-	VO_TRY_VK(vkCreateAccelerationStructureKHR(device, &blasCreateInfo, nullptr, &info.accel));
+	VO_TRY_VK(_renderer._vkCreateAccelerationStructureKHR(device, &blasCreateInfo, nullptr, &info.accel));
 
 	VkAccelerationStructureDeviceAddressInfoKHR as_device_address_info =
 	{
@@ -514,7 +526,7 @@ bool VertexBuffer::CreateModelBlas(ModelGeometry& info, VkBuffer buffer, const c
 		.accelerationStructure = info.accel
 	};
 
-	info.blas_device_address = vkGetAccelerationStructureDeviceAddressKHR(device, &as_device_address_info);
+	info.blas_device_address = _renderer._vkGetAccelerationStructureDeviceAddressKHR(device, &as_device_address_info);
 
 	if (name)
 		_renderer.SetObjectName(info.accel, name);
@@ -555,7 +567,7 @@ bool VertexBuffer::BuildModelBlas(VkCommandBuffer cmds, ModelGeometry& info, uin
 
 	const VkAccelerationStructureBuildRangeInfoKHR* pBlasBuildRange = info.build_ranges;
 
-	vkCmdBuildAccelerationStructuresKHR(cmds, 1, &blasBuildinfo, &pBlasBuildRange);
+	_renderer._vkCmdBuildAccelerationStructuresKHR(cmds, 1, &blasBuildinfo, &pBlasBuildRange);
 
 	VkMemoryBarrier barrier =
 	{

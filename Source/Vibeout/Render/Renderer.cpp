@@ -214,6 +214,8 @@ bool Renderer::InitInstance()
         chosenExtensions.push_back(extensions[i]);
     }
 
+    chosenExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
 #ifdef VO_DEBUG
     chosenExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
@@ -236,11 +238,12 @@ bool Renderer::InitInstance()
 #endif
     };
 
-    if (vkCreateInstance(&createInfo, nullptr, &_instance) != VK_SUCCESS)
-    {
-        printf("Failed to create Vulkan instance\n");
-        return false;
-    }
+    VO_TRY_VK(vkCreateInstance(&createInfo, nullptr, &_instance));
+
+    _vkCreateAccelerationStructureKHR = (PFN_vkCreateAccelerationStructureKHR)vkGetInstanceProcAddr(_instance, "vkCreateAccelerationStructureKHR");
+    _vkCmdBuildAccelerationStructuresKHR = (PFN_vkCmdBuildAccelerationStructuresKHR)vkGetInstanceProcAddr(_instance, "vkCmdBuildAccelerationStructuresKHR");
+    _vkGetAccelerationStructureDeviceAddressKHR = (PFN_vkGetAccelerationStructureDeviceAddressKHR)vkGetInstanceProcAddr(_instance, "vkGetAccelerationStructureDeviceAddressKHR");
+    _vkGetAccelerationStructureBuildSizesKHR = (PFN_vkGetAccelerationStructureBuildSizesKHR)vkGetInstanceProcAddr(_instance, "vkGetAccelerationStructureBuildSizesKHR");
 
 #ifdef VO_DEBUG
     // Debug utils
@@ -269,7 +272,7 @@ bool Renderer::InitSurface()
 {
     if (!SDL_Vulkan_CreateSurface(&_window, _instance, nullptr, &_surface))
     {
-        printf("Failed to create Vulkan surface: %s\n", SDL_GetError());
+        std::cerr << "Failed to create SDL Vulkan surface: " << SDL_GetError();
         return false;
     }
 
@@ -292,6 +295,7 @@ bool Renderer::InitPhysicalDevice()
             vkGetPhysicalDeviceProperties(b, &propsB);
             if (propsA.deviceType != propsB.deviceType)
                 return propsA.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+
             return true;
         };
     std::sort(physicalDevices.begin(), physicalDevices.end(), compare);
@@ -312,10 +316,19 @@ bool Renderer::InitPhysicalDevice()
         }
     }
 
-    if (!_physicalDevice)
+    VO_TRY(_physicalDevice, "Failed to find suitable GPU!");
+
     {
-        std::cerr << "Failed to find suitable GPU!\n";
-        return false;
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR accelStructFeatures{};
+        accelStructFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+
+        VkPhysicalDeviceFeatures2 deviceFeatures2{};
+        deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        deviceFeatures2.pNext = &accelStructFeatures;
+
+        vkGetPhysicalDeviceFeatures2(_physicalDevice, &deviceFeatures2);
+
+        VO_TRY(accelStructFeatures.accelerationStructure, "The selected GPU device is not compatible with hardware raytracing (RTX, etc...)");
     }
 
     vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &_memProperties);
@@ -360,7 +373,8 @@ bool Renderer::InitLogicalDevice()
     // Enable device extensions (swapchain is essential)
     const char* deviceExtensions[] =
     {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME
     };
 
     VkPhysicalDeviceFeatures2 features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };

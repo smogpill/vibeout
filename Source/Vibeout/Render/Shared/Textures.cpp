@@ -9,6 +9,7 @@
 #include "Vibeout/Game/Game.h"
 #include "Vibeout/World/World.h"
 #include "Vibeout/World/Heightmap/Heightmap.h"
+#include "Vibeout/Base/Utils.h"
 
 Textures::Textures(Renderer& renderer, bool& result)
 	: _renderer(renderer)

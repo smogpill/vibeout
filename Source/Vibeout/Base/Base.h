@@ -17,11 +17,6 @@ inline void ReturnVoid(int) {} // to avoid some gcc warnings with the comma oper
 std::string GetVulkanError(VkResult result);
 void Info(const std::string& message);
 void Error(const char* file, uint line, const std::string& message);
-template <class T>
-constexpr T AlignUp(const T val, const T alignment)
-{
-	return (val + (alignment - 1)) & ~(alignment - 1);
-}
 
 #ifdef _MSC_VER
 #define VO_BREAKPOINT() ReturnVoid(IsDebuggerPresent() && (__debugbreak(), 1))

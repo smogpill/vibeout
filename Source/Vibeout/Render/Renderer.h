@@ -24,6 +24,7 @@ template<> struct GetVkObjectType<VkDescriptorSet> { static inline  VkObjectType
 template<> struct GetVkObjectType<VkDescriptorSetLayout> { static inline  VkObjectType _value = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT; };
 template<> struct GetVkObjectType<VkFramebuffer> { static inline  VkObjectType _value = VK_OBJECT_TYPE_FRAMEBUFFER; };
 template<> struct GetVkObjectType<VkSampler> { static inline  VkObjectType _value = VK_OBJECT_TYPE_SAMPLER; };
+template<> struct GetVkObjectType<VkAccelerationStructureKHR> { static inline  VkObjectType _value = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR; };
 
 class Renderer
 {
@@ -144,6 +145,10 @@ private:
 	VmaAllocator _vmaAllocator = nullptr;
 	CommandBufferGroup _graphicsCommandBuffers;
 	VkPhysicalDeviceMemoryProperties _memProperties = {};
+	PFN_vkCreateAccelerationStructureKHR _vkCreateAccelerationStructureKHR = nullptr;
+	PFN_vkCmdBuildAccelerationStructuresKHR _vkCmdBuildAccelerationStructuresKHR = nullptr;
+	PFN_vkGetAccelerationStructureDeviceAddressKHR _vkGetAccelerationStructureDeviceAddressKHR = nullptr;
+	PFN_vkGetAccelerationStructureBuildSizesKHR _vkGetAccelerationStructureBuildSizesKHR = nullptr;
 	PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT = nullptr;
 	PFN_vkCmdEndDebugUtilsLabelEXT _vkCmdEndDebugUtilsLabelEXT = nullptr;
 	PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;

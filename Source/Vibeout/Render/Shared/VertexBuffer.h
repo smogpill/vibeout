@@ -39,7 +39,7 @@ struct ModelVBO
 	bool _static = false;
 };
 
-struct Model
+struct ModelDesc
 {
 	ModelGeometry _geometry;
 };
@@ -49,7 +49,7 @@ struct WorldData
 	ModelGeometry _opaqueGeom;
 	ModelGeometry _transparentGeom;
 	ModelGeometry _maskedGeom;
-	std::vector<Model> _models;
+	std::vector<ModelDesc> _models;
 	uint64 _vertexDataOffset = 0;
 };
 
