@@ -6,6 +6,8 @@
 #include "Vibeout/World/World.h"
 #include "Vibeout/Game/Camera/Camera.h"
 #include "Vibeout/Resource/Model/Model.h"
+#include "Vibeout/Resource/Craft/CraftPack.h"
+#include "Vibeout/Resource/Manager/ResourceManager.h"
 
 const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 
@@ -16,7 +18,7 @@ Game::Game()
 	// Spawn pos
 	_camera->SetTranslation(glm::dvec3(0, 2, 0));
 
-	LoadCraftModels();
+	LoadResources();
 }
 Game::~Game()
 {
@@ -60,17 +62,8 @@ void Game::FixedUpdate(float deltaTime)
 {
 }
 
-void Game::LoadCraftModels()
+void Game::LoadResources()
 {
-	VO_ASSERT(_craftModels.empty());
-	const char* modelIds[] =
-	{
-		"Assets/Big/Models/Feisar/feisar_prototype.obj"
-	};
-	for (const char* modelId : modelIds)
-	{
-		ResourceHandle<Model> handle;
-		handle.LoadAsync(modelId, [](bool) {});
-		_craftModels.emplace_back(std::move(handle));
-	}
+	ResourceManager* resourceManager = ResourceManager::s_instance;
+	_craftPack = resourceManager->LoadAsync<CraftPack>("CraftPack", [](bool) {});
 }

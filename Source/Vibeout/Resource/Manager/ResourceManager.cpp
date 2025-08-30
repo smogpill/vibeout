@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "ResourceManager.h"
+#include "ResourceLoader.h"
 
 ResourceManager::ResourceManager(const std::string& assetsPath)
 	: _assetsPath(assetsPath)
@@ -24,7 +25,11 @@ void ResourceManager::DestroyHolder(ResourceHolder& holder)
 	_mutex.unlock();
 }
 
-auto ResourceManager::GetAssetPathFromId(const std::string& id) const -> std::string
+bool ResourceManager::Load(ResourceHolder& holder)
 {
-	return (std::filesystem::path(_assetsPath) / id).string();
+	ResourceLoader loader(holder);
+	holder.AddLoadingDependency();
+	const bool result = holder.Load(loader);
+	holder.RemoveLoadingDependency();
+	return result;
 }

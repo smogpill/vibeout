@@ -4,20 +4,26 @@
 #pragma once
 #include "Vibeout/Base/Singleton.h"
 #include "ResourceHolder.h"
+#include "Vibeout/Resource/Resource.h"
 
 class ResourceManager : public Singleton<ResourceManager>
 {
 public:
 	ResourceManager(const std::string& assetsPath);
 	~ResourceManager();
+	
+	template <class T, class F>
+	auto LoadAsync(const std::string& id, F&& onDone) -> ResourceHandle<T>;
+	auto GetAssetsPath() const -> const std::string& { return _assetsPath; }
+
+private:
+	friend class ResourceHolder;
 
 	template <class T>
 	auto GetOrCreateHolder(const std::string& id) -> TypedResourceHolder<T>*;
-
 	void DestroyHolder(ResourceHolder& holder);
-	auto GetAssetPathFromId(const std::string& id) const -> std::string;
+	bool Load(ResourceHolder& holder);
 
-private:
 	mutable std::mutex _mutex;
 	std::unordered_map<std::string, ResourceHolder*> _map;
 	std::string _assetsPath;
@@ -38,4 +44,17 @@ TypedResourceHolder<T>* ResourceManager::GetOrCreateHolder(const std::string& id
 	{
 		return static_cast<TypedResourceHolder<T>*>(it->second);
 	}
+}
+
+template <class T, class F>
+ResourceHandle<T> ResourceManager::LoadAsync(const std::string& id, F&& onDone)
+{
+	ResourceHandle<T> handle(GetOrCreateHolder<T>(id));
+	auto func = [handle, onDone]()
+		{
+			const bool result = ResourceManager::s_instance->Load(*handle._holder);
+			onDone(result);
+		};
+	auto future = std::async(std::launch::async, func);
+	return handle;
 }

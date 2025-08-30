@@ -4,7 +4,7 @@
 #include "PCH.h"
 #include "Model.h"
 #include "Vibeout/Resource/Material/Material.h"
-#include "Vibeout/Resource/Manager/ResourceManager.h"
+#include "Vibeout/Resource/Manager/ResourceLoader.h"
 #include "Vibeout/Resource/Texture/Texture.h"
 
 namespace
@@ -33,19 +33,14 @@ namespace
     using VertexMap = std::unordered_map<tinyobj::index_t, uint32, IndexHash, IndexEqual>;
 }
 
-Model::Model(const std::string& id, bool& result)
-{
-    result = Init(id);
-}
-
 Model::~Model()
 {
 
 }
 
-bool Model::Init(const std::string& id)
+bool Model::OnLoad(ResourceLoader& loader)
 {
-    const std::string path = ResourceManager::s_instance->GetAssetPathFromId(id);
+    const std::filesystem::path path = loader.GetAssetPath();
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> inputShapes;
@@ -53,17 +48,18 @@ bool Model::Init(const std::string& id)
 
     std::string warningMsg;
     std::string errorMsg;
-    if (!tinyobj::LoadObj(&attrib, &inputShapes, &inputMaterials, &warningMsg, &errorMsg, id.c_str()))
+    if (!tinyobj::LoadObj(&attrib, &inputShapes, &inputMaterials, &warningMsg, &errorMsg, path.string().c_str()))
     {
-        VO_ERROR("Failed to load: {}: ", id, errorMsg);
+        VO_ERROR("Failed to load: {}: ", loader.GetId(), errorMsg);
         return false;
     }
 
+    std::filesystem::path folder = path.parent_path();
+
     for (const tinyobj::material_t& inputMaterial : inputMaterials)
     {
-        bool result;
-        std::shared_ptr<Material> material(new Material(inputMaterial, result));
-        VO_TRY(result, "Failed to load a material of {}", id);
+        std::shared_ptr<Material> material(new Material());
+        VO_TRY(material->OnLoad(loader, inputMaterial, folder.string()), "Failed to load a material of {}", loader.GetId());
         _materials.emplace_back(material);
     }
     

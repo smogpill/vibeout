@@ -9,7 +9,8 @@ class Material
 {
 public:
 	Material() = default;
-	Material(const tinyobj::material_t& inputMaterial, bool& result);
+
+	bool OnLoad(ResourceLoader& loader, const tinyobj::material_t& inputMaterial, const std::string& folder);
 
 	ResourceHandle<Texture> _diffuseTex;
 	ResourceHandle<Texture> _specularTex;

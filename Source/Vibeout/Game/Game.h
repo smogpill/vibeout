@@ -6,7 +6,7 @@
 #include "Vibeout/Base/Singleton.h"
 #include "Vibeout/Resource/Resource.h"
 class Map; class Craft; class World; class Camera;
-class Model;
+class Model; class CraftPack;
 
 class Game : public Singleton<Game>
 {
@@ -27,7 +27,7 @@ public:
 
 private:
 	void FixedUpdate(float deltaTime);
-	void LoadCraftModels();
+	void LoadResources();
 
 	static const float s_fixedTimeStep;
 
@@ -38,5 +38,5 @@ private:
 	float _deltaTime = 0.0f;
 	float _fixedUpdateAccumulator = 0.0f;
 
-	std::vector<ResourceHandle<Model>> _craftModels;
+	ResourceHandle<CraftPack> _craftPack;
 };

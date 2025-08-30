@@ -5,12 +5,7 @@
 #include "Material.h"
 #include "Vibeout/Resource/Texture/Texture.h"
 
-Material::Material(const tinyobj::material_t& inputMaterial, bool& result)
-{
-	result = Init(inputMaterial);
-}
-
-bool Material::Init(const tinyobj::material_t& inputMaterial)
+bool Material::OnLoad(ResourceLoader& loader, const tinyobj::material_t& inputMaterial, const std::string& folder)
 {
 	_roughness = inputMaterial.roughness;
 	_metallic = inputMaterial.metallic;

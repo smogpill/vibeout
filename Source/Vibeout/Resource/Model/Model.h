@@ -3,16 +3,16 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 class Material;
+class ResourceLoader;
 
 class Model
 {
 public:
-	Model(const std::string& id, bool& result);
 	~Model();
+
+	bool OnLoad(ResourceLoader& loader);
 	
 private:
-	bool Init(const std::string& id);
-
 	struct Vertex
 	{
 		float _pos[3];

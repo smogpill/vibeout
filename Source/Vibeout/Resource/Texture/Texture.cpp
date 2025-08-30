@@ -3,28 +3,23 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "Texture.h"
-#include "Vibeout/Resource/Manager/ResourceManager.h"
-
-Texture::Texture(const std::string& id, bool& result)
-{
-	result = Init(id);
-}
+#include "Vibeout/Resource/Manager/ResourceLoader.h"
 
 Texture::~Texture()
 {
 	delete[] _buffer;
 }
 
-bool Texture::Init(const std::string& id)
+bool Texture::OnLoad(ResourceLoader& loader)
 {
-	const std::string path = ResourceManager::s_instance->GetAssetPathFromId(id);
+	const std::string& path = loader.GetAssetPath();
 
 	const int sixteenBits = stbi_is_16_bit(path.c_str()) != 0;
 
 	int width, height, nbComponentsInFile;
 	if (!stbi_info(path.c_str(), &width, &height, &nbComponentsInFile))
 	{
-		VO_ERROR("Failed to gather info from {}: {}", id, stbi_failure_reason());
+		VO_ERROR("Failed to gather info from {}: {}", loader.GetId(), stbi_failure_reason());
 		return false;
 	}
 
@@ -33,7 +28,7 @@ bool Texture::Init(const std::string& id)
 		stbi_us* result = stbi_load_16(path.c_str(), &width, &height, &nbComponentsInFile, nbComponentsInFile);
 		if (!result)
 		{
-			VO_ERROR("Failed to load {}: {}", id, stbi_failure_reason());
+			VO_ERROR("Failed to load {}: {}", loader.GetId(), stbi_failure_reason());
 			return false;
 		}
 		const uint64 size = width * height * nbComponentsInFile * sizeof(uint16);
@@ -46,7 +41,7 @@ bool Texture::Init(const std::string& id)
 		stbi_uc* result = stbi_load(path.c_str(), &width, &height, &nbComponentsInFile, nbComponentsInFile);
 		if (!result)
 		{
-			VO_ERROR("Failed to load {}: {}", id, stbi_failure_reason());
+			VO_ERROR("Failed to load {}: {}", loader.GetId(), stbi_failure_reason());
 			return false;
 		}
 		const uint64 size = width * height * nbComponentsInFile * sizeof(uint8);

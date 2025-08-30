@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Vibeout/Base/Reference.h"
+class ResourceLoader;
 
 class ResourceHolder : public RefCounted<ResourceHolder>
 {
@@ -12,15 +13,19 @@ public:
 	virtual ~ResourceHolder() = default;
 
 	[[nodiscard]]
-	bool Load();
+	virtual bool Load(ResourceLoader& loader) = 0;
 	void WaitReady();
 	auto GetId() const -> const std::string& { return _id; }
+	void AddLoadingDependency();
+	void RemoveLoadingDependency();
 
 protected:
+	friend class ResourceLoader;
 	void OnAllRefsRemoved() override;
-	virtual bool OnLoad() = 0;
 
 	std::string _id;
+	RefPtr<ResourceHolder> _loadingParent;
+	std::atomic<uint32> _nbLoadingDependencies = 0;
 };
 
 template <class T>
@@ -31,23 +36,22 @@ public:
 	TypedResourceHolder(const std::string& id) : Base(id) {}
 	~TypedResourceHolder() { delete _resource; }
 
+	bool Load(ResourceLoader& loader) override;
 	auto Get() const -> const T* { return _resource; }
 
 private:
-	bool OnLoad() override;
-
 	std::atomic<T*> _resource = nullptr;
 };
 
 template <class T>
-bool TypedResourceHolder<T>::OnLoad()
+bool TypedResourceHolder<T>::Load(ResourceLoader& loader)
 {
-	bool result;
-	std::unique_ptr<T> resource(new T(_id, result));
-	if (result)
+	std::unique_ptr<T> resource(new T());
+	if (resource->OnLoad(loader))
 	{
 		delete _resource;
 		_resource = resource.release();
+		return true;
 	}
-	return result;
+	return false;
 }

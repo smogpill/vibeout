@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
+class ResourceLoader;
 
 class Texture
 {
 public:
-	Texture(const std::string& id, bool& result);
 	~Texture();
+
+	bool OnLoad(ResourceLoader& loader);
 
 	auto GetBuffer() const -> const void* { return _buffer; }
 	uint GetWidth() const { return _width; }

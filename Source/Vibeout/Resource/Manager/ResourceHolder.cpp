@@ -10,14 +10,22 @@ ResourceHolder::ResourceHolder(const std::string& id)
 {
 }
 
-bool ResourceHolder::Load()
-{
-	return OnLoad();
-}
-
 void ResourceHolder::WaitReady()
 {
 	VO_ASSERT(false);
+}
+
+void ResourceHolder::AddLoadingDependency()
+{
+	++_nbLoadingDependencies;
+}
+
+void ResourceHolder::RemoveLoadingDependency()
+{
+	if (--_nbLoadingDependencies == 0)
+	{
+
+	}
 }
 
 void ResourceHolder::OnAllRefsRemoved()
