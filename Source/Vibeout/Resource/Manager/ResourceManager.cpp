@@ -4,6 +4,12 @@
 #include "PCH.h"
 #include "ResourceManager.h"
 
+ResourceManager::ResourceManager(const std::string& assetsPath)
+	: _assetsPath(assetsPath)
+{
+
+}
+
 ResourceManager::~ResourceManager()
 {
 	std::scoped_lock lock(_mutex);
@@ -16,4 +22,9 @@ void ResourceManager::DestroyHolder(ResourceHolder& holder)
 	auto it = _map.find(holder.GetId());
 	_map.erase(it);
 	_mutex.unlock();
+}
+
+auto ResourceManager::GetAssetPathFromId(const std::string& id) const -> std::string
+{
+	return (std::filesystem::path(_assetsPath) / id).string();
 }

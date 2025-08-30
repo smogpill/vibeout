@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "Material.h"
+#include "Vibeout/Resource/Texture/Texture.h"
 
 Material::Material(const tinyobj::material_t& inputMaterial, bool& result)
 {

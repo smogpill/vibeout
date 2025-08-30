@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     }
 
     {
-        ResourceManager resourceManager;
+        ResourceManager resourceManager("Assets");
         PhysicsWorld physicsWorld;
         Game game;
         game.SetWorld("Rugged");

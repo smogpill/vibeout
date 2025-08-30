@@ -4,6 +4,8 @@
 #include "PCH.h"
 #include "Model.h"
 #include "Vibeout/Resource/Material/Material.h"
+#include "Vibeout/Resource/Manager/ResourceManager.h"
+#include "Vibeout/Resource/Texture/Texture.h"
 
 namespace
 {
@@ -43,6 +45,8 @@ Model::~Model()
 
 bool Model::Init(const std::string& id)
 {
+    const std::string path = ResourceManager::s_instance->GetAssetPathFromId(id);
+
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> inputShapes;
     std::vector<tinyobj::material_t> inputMaterials;

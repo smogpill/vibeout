@@ -8,16 +8,19 @@
 class ResourceManager : public Singleton<ResourceManager>
 {
 public:
+	ResourceManager(const std::string& assetsPath);
 	~ResourceManager();
 
 	template <class T>
 	auto GetOrCreateHolder(const std::string& id) -> TypedResourceHolder<T>*;
 
 	void DestroyHolder(ResourceHolder& holder);
+	auto GetAssetPathFromId(const std::string& id) const -> std::string;
 
 private:
 	mutable std::mutex _mutex;
 	std::unordered_map<std::string, ResourceHolder*> _map;
+	std::string _assetsPath;
 };
 
 template <class T>

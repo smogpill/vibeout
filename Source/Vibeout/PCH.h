@@ -47,6 +47,7 @@
 
 #include <vk_mem_alloc.h>
 
+#define STBI_FAILURE_USERMSG
 #include <stb_image.h>
 
 #include <tinyobjloader/tiny_obj_loader.h>
