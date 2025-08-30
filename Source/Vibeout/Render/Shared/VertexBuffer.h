@@ -46,6 +46,7 @@ struct ModelDesc
 
 struct WorldData
 {
+	std::vector<VboPrimitive> _primitives;
 	ModelGeometry _opaqueGeom;
 	ModelGeometry _transparentGeom;
 	ModelGeometry _maskedGeom;
@@ -65,6 +66,7 @@ public:
 	VkDescriptorSet GetDescSet() const { return _descSet; }
 	VkDescriptorSetLayout GetDescSetLayout() const { return _descSetLayout; }
 	Buffer* GetToneMapBuffer() const { return _toneMapBuffer; }
+	bool BuildWorldData();
 	bool UploadWorld();
 
 private:
@@ -80,6 +82,7 @@ private:
 	bool CreateModelBlas(ModelGeometry& info, VkBuffer buffer, const char* name);
 	bool BuildModelBlas(VkCommandBuffer cmds, ModelGeometry& info, uint64 first_vertex_offset, const Buffer& buffer);
 	bool CreatePrimitiveBuffer();
+	void DestroyPrimitiveBuffer();
 
 	Renderer& _renderer;
 	VkDescriptorPool desc_pool_vertex_buffer = nullptr;
@@ -97,5 +100,5 @@ private:
 	Buffer* _accelScratchBuffer = nullptr;
 	uint32 _nbInstancedPrimitives = 1 << 20;
 	ModelVBO _modelVertexData[s_maxNbModels];
-	WorldData _worldData;
+	WorldData* _worldData = nullptr;
 };

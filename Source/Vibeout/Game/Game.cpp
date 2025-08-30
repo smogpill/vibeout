@@ -7,7 +7,7 @@
 #include "Vibeout/Game/Camera/Camera.h"
 
 // Temp
-#include "Vibeout/Asset/Model/Model.h"
+#include "Vibeout/Resource/Model/Model.h"
 
 const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 

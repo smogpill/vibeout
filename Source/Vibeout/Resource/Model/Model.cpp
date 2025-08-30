@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "Model.h"
-#include "Vibeout/Asset/Material/Material.h"
+#include "Vibeout/Resource/Material/Material.h"
 
 namespace
 {
@@ -31,25 +31,31 @@ namespace
     using VertexMap = std::unordered_map<tinyobj::index_t, uint32, IndexHash, IndexEqual>;
 }
 
-void Model::OnLoad(const char* path)
+Model::Model(const std::string& id, bool& result)
 {
-    Base::OnLoad(path);
+    result = Init(id);
+}
 
+bool Model::Init(const std::string& id)
+{
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> inputShapes;
     std::vector<tinyobj::material_t> inputMaterials;
 
     std::string warningMsg;
     std::string errorMsg;
-    if (!tinyobj::LoadObj(&attrib, &inputShapes, &inputMaterials, &warningMsg, &errorMsg, path))
+    if (!tinyobj::LoadObj(&attrib, &inputShapes, &inputMaterials, &warningMsg, &errorMsg, id.c_str()))
     {
-        VO_ERROR("Failed to load: {}: ", path, errorMsg);
-        return;
+        VO_ERROR("Failed to load: {}: ", id, errorMsg);
+        return false;
     }
 
     for (const tinyobj::material_t& inputMaterial : inputMaterials)
     {
-        _materials.emplace_back(Material::LoadFromObj(inputMaterial));
+        bool result;
+        std::shared_ptr<Material> material(new Material(inputMaterial, result));
+        VO_TRY(result, "Failed to load a material of {}", id);
+        _materials.emplace_back(material);
     }
     
     VertexMap vertexMap;
@@ -96,4 +102,5 @@ void Model::OnLoad(const char* path)
             shape._indices[i] = vertexIdx;
         }
     }
+    return true;
 }

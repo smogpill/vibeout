@@ -8,6 +8,7 @@
 #include "Vibeout/Render/Shared/Utils.h"
 #include "Vibeout/Render/Shared/Buffers.h"
 #include "Vibeout/Base/Utils.h"
+#include "Vibeout/Game/Game.h"
 
 VertexBuffer::VertexBuffer(Renderer& renderer, bool& result)
 	: _renderer(renderer)
@@ -17,6 +18,7 @@ VertexBuffer::VertexBuffer(Renderer& renderer, bool& result)
 
 VertexBuffer::~VertexBuffer()
 {
+	delete _worldData;
 	VkDevice device = _renderer.GetDevice();
 	if (desc_pool_vertex_buffer)
 		vkDestroyDescriptorPool(device, desc_pool_vertex_buffer, nullptr);
@@ -228,17 +230,32 @@ bool VertexBuffer::Readback(ReadbackBuffer& dst)
 
 bool VertexBuffer::InitPipelines()
 {
+	/*
 	VkDevice device = _renderer.GetDevice();
 	VO_TRY(device);
 	Buffers* buffers = _renderer._buffers;
 	VO_TRY(buffers);
 	VkDescriptorSetLayout descSetLayoutUBO = buffers->GetDescriptorSetLayout();
 	VO_TRY(descSetLayoutUBO);
+	*/
 	return true;
 }
 
 void VertexBuffer::ShutdownPipelines()
 {
+}
+
+bool VertexBuffer::BuildWorldData()
+{
+	delete _worldData; _worldData = nullptr;
+	Game* game = Game::_instance;
+	if (!game)
+		return true;
+
+	std::unique_ptr<WorldData> worldData(new WorldData());
+
+	worldData->
+	return true;
 }
 
 bool VertexBuffer::UploadWorld()
@@ -248,9 +265,7 @@ bool VertexBuffer::UploadWorld()
 	vkDeviceWaitIdle(device);
 	delete _worldBuffer; _worldBuffer = nullptr;
 
-	std::vector<VboPrimitive> primitives;
-
-	const uint64 nbPrimitives = primitives.size();
+	const uint64 nbPrimitives = _worldData._primitives.size();
 	uint64 vboSize = nbPrimitives * sizeof(VboPrimitive);
 	_worldData._vertexDataOffset = vboSize;
 	vboSize += nbPrimitives * sizeof(mat3);
@@ -310,9 +325,9 @@ bool VertexBuffer::UploadWorld()
 	}
 
 	uint8* stagingData = (uint8*)stagingBuffer->Map();
-	memcpy(stagingData, primitives.data(), nbPrimitives * sizeof(VboPrimitive));
+	memcpy(stagingData, _worldData._primitives.data(), nbPrimitives * sizeof(VboPrimitive));
 
-	auto vectorCopy = [](float* out, const float* in)
+	auto vectorCopy = [](const float* in, float* out)
 		{
 			out[0] = in[0];
 			out[1] = in[1];
@@ -322,9 +337,9 @@ bool VertexBuffer::UploadWorld()
 	mat3* positions = (mat3*)(stagingData + _worldData._vertexDataOffset);
 	for (uint32 primIdx = 0; primIdx < nbPrimitives; ++primIdx)
 	{
-		vectorCopy(primitives[primIdx].pos0, positions[primIdx][0]);
-		vectorCopy(primitives[primIdx].pos1, positions[primIdx][1]);
-		vectorCopy(primitives[primIdx].pos2, positions[primIdx][2]);
+		vectorCopy(_worldData._primitives[primIdx].pos0, positions[primIdx][0]);
+		vectorCopy(_worldData._primitives[primIdx].pos1, positions[primIdx][1]);
+		vectorCopy(_worldData._primitives[primIdx].pos2, positions[primIdx][2]);
 	}
 
 	stagingBuffer->Unmap();
@@ -458,6 +473,12 @@ bool VertexBuffer::CreatePrimitiveBuffer()
 	vkUpdateDescriptorSets(device, 1, &output_buf_write, 0, nullptr);
 
 	return true;
+}
+
+void VertexBuffer::DestroyPrimitiveBuffer()
+{
+	delete _instancedPrimitiveBuffer; _instancedPrimitiveBuffer = nullptr;
+	delete _instancedPositionsBuffer; _instancedPositionsBuffer = nullptr;
 }
 
 bool VertexBuffer::SuballocateModelBlasMemory(ModelGeometry& info, uint64& vboSize, const char* name)

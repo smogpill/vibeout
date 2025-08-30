@@ -1306,6 +1306,15 @@ bool Renderer::AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* me
     return true;
 }
 
+bool Renderer::LoadWorld()
+{
+    VO_TRY(_vertexBuffer->BuildWorldData());
+    VO_TRY(_vertexBuffer->UploadWorld());
+    //bsp_mesh_register_textures(bsp);
+    //bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
+    //_VK(vkpt_vertex_buffer_upload_bsp_mesh(&vkpt_refdef.bsp_mesh_world));
+}
+
 void Renderer::OnWindowResized()
 {
     Recreate();

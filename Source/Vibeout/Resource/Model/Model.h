@@ -2,18 +2,16 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "Vibeout/Asset/Asset.h"
 class Material;
 
-class Model : public Asset
+class Model
 {
-	using Base = Asset;
 public:
+	Model(const std::string& id, bool& result);
 	
-protected:
-	void OnLoad(const char* path) override;
-
 private:
+	bool Init(const std::string& id);
+
 	struct Vertex
 	{
 		float _pos[3];

@@ -9,13 +9,13 @@ class Singleton
 public:
 	Singleton()
 	{
-		VO_ASSERT(_instance == nullptr);
-		_instance = static_cast<T*>(this);
+		VO_ASSERT(s_instance == nullptr);
+		s_instance = static_cast<T*>(this);
 	}
 	~Singleton()
 	{
-		_instance = nullptr;
+		s_instance = nullptr;
 	}
 
-	static inline T* _instance = nullptr;
+	static inline T* s_instance = nullptr;
 };

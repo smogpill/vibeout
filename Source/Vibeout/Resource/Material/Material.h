@@ -7,7 +7,8 @@ class Texture;
 class Material
 {
 public:
-	static Material* LoadFromObj(const tinyobj::material_t& inputMaterial);
+	Material() = default;
+	Material(const tinyobj::material_t& inputMaterial, bool& result);
 
 	std::shared_ptr<Texture> _diffuseTex;
 	std::shared_ptr<Texture> _specularTex;
@@ -21,4 +22,7 @@ public:
 	glm::vec3 _emission = glm::vec3(0.0f);
 	float _metallic = 0.0f;
 	float _roughness = 1.0f;
+
+private:
+	bool Init(const tinyobj::material_t& inputMaterial);
 };

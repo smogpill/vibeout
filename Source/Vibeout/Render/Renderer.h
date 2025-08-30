@@ -41,6 +41,7 @@ public:
 	bool GetMemoryType(uint32 memReqTypeBits, VkMemoryPropertyFlags memProps, uint32& outMemType) const;
 	auto GetAvailableVideoMemory() const -> VkDeviceSize;
 	bool AllocateGPUMemory(VkMemoryRequirements memReq, VkDeviceMemory* memory);
+	bool LoadWorld();
 
 	void OnWindowResized();
 
