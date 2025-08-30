@@ -26,7 +26,17 @@ template <class T>
 class RefPtr
 {
 public:
-	~RefPtr() { if (_ptr) _ptr->RemoveRef(); }
+	RefPtr() = default;
+	RefPtr(const RefPtr& other) : _ptr(other._ptr) { if (_ptr) _ptr->AddRef(); }
+	RefPtr(RefPtr&& other) : _ptr(other._ptr) { other._ptr = nullptr; }
+	~RefPtr() { Release(); }
+
+	void Release() { if (_ptr) _ptr->RemoveRef(); }
+
+	auto operator=(const RefPtr& other) -> RefPtr&;
+	auto operator=(RefPtr&& other) -> RefPtr&;
+	auto operator=(T* ptr) -> RefPtr&;
+	auto operator->() const -> T* { return _ptr; }
 
 private:
 	T* _ptr = nullptr;
@@ -36,8 +46,8 @@ template <class T>
 class ConstRefPtr
 {
 public:
-	~ConstRefPtr() { if (_ptr) _ptr->RemoveRef(); }
-
+	~ConstRefPtr() { Release(); }
+	void Release() { if (_ptr) _ptr->RemoveRef(); }
 private:
 	const T* _ptr = nullptr;
 };
@@ -46,5 +56,39 @@ template <class T>
 void RefCounted<T>::RemoveRef() const
 {
 	if (--_nbRefs == 0)
-		OnAllRefsRemoved();
+		const_cast<RefCounted<T>*>(this)->OnAllRefsRemoved();
+}
+
+template <class T>
+auto RefPtr<T>::operator=(const RefPtr& other) -> RefPtr&
+{
+	T* oldPtr = _ptr;
+	_ptr = other._ptr;
+	if (_ptr)
+		_ptr->AddRef();
+	if (oldPtr)
+		oldPtr->RemoveRef();
+	return *this;
+}
+
+template <class T>
+auto RefPtr<T>::operator=(RefPtr&& other) -> RefPtr&
+{
+	std::swap(_ptr, other._ptr);
+	return *this;
+}
+
+template <class T>
+auto RefPtr<T>::operator=(T* ptr) -> RefPtr&
+{
+	if (_ptr != ptr)
+	{
+		T* oldPtr = _ptr;
+		_ptr = ptr;
+		if (_ptr)
+			_ptr->AddRef();
+		if (oldPtr)
+			oldPtr->RemoveRef();
+	}
+	return *this;
 }

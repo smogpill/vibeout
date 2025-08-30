@@ -254,7 +254,7 @@ bool VertexBuffer::BuildWorldData()
 
 	std::unique_ptr<WorldData> worldData(new WorldData());
 
-	worldData->
+	//worldData->
 	return true;
 }
 
@@ -265,21 +265,21 @@ bool VertexBuffer::UploadWorld()
 	vkDeviceWaitIdle(device);
 	delete _worldBuffer; _worldBuffer = nullptr;
 
-	const uint64 nbPrimitives = _worldData._primitives.size();
+	const uint64 nbPrimitives = _worldData->_primitives.size();
 	uint64 vboSize = nbPrimitives * sizeof(VboPrimitive);
-	_worldData._vertexDataOffset = vboSize;
+	_worldData->_vertexDataOffset = vboSize;
 	vboSize += nbPrimitives * sizeof(mat3);
 	const uint64 stagingSize = vboSize;
 
 	// Suballocations
 	{
-		VO_TRY(SuballocateModelBlasMemory(_worldData._opaqueGeom, vboSize, "WorldOpaque"));
-		VO_TRY(SuballocateModelBlasMemory(_worldData._transparentGeom, vboSize, "WorldTransparent"));
-		VO_TRY(SuballocateModelBlasMemory(_worldData._maskedGeom, vboSize, "WorldMasked"));
+		VO_TRY(SuballocateModelBlasMemory(_worldData->_opaqueGeom, vboSize, "WorldOpaque"));
+		VO_TRY(SuballocateModelBlasMemory(_worldData->_transparentGeom, vboSize, "WorldTransparent"));
+		VO_TRY(SuballocateModelBlasMemory(_worldData->_maskedGeom, vboSize, "WorldMasked"));
 
-		for (int i = 0; i < _worldData._models.size(); i++)
+		for (int i = 0; i < _worldData->_models.size(); i++)
 		{
-			ModelDesc& model = _worldData._models[i];
+			ModelDesc& model = _worldData->_models[i];
 			VO_TRY(SuballocateModelBlasMemory(model._geometry, vboSize, std::format("Model{}", i).c_str()));
 		}
 	}
@@ -313,19 +313,19 @@ bool VertexBuffer::UploadWorld()
 	}
 
 	{
-		VO_TRY(CreateModelBlas(_worldData._opaqueGeom, _worldBuffer->GetBuffer(), "WorldOpaque"));
-		VO_TRY(CreateModelBlas(_worldData._transparentGeom, _worldBuffer->GetBuffer(), "WorldTransparent"));
-		VO_TRY(CreateModelBlas(_worldData._maskedGeom, _worldBuffer->GetBuffer(), "WorldMasked"));
+		VO_TRY(CreateModelBlas(_worldData->_opaqueGeom, _worldBuffer->GetBuffer(), "WorldOpaque"));
+		VO_TRY(CreateModelBlas(_worldData->_transparentGeom, _worldBuffer->GetBuffer(), "WorldTransparent"));
+		VO_TRY(CreateModelBlas(_worldData->_maskedGeom, _worldBuffer->GetBuffer(), "WorldMasked"));
 
-		for (int i = 0; i < _worldData._models.size(); i++)
+		for (int i = 0; i < _worldData->_models.size(); i++)
 		{
-			ModelDesc& model = _worldData._models[i];
+			ModelDesc& model = _worldData->_models[i];
 			VO_TRY(CreateModelBlas(model._geometry, _worldBuffer->GetBuffer(), std::format("Model{}", i).c_str()));
 		}
 	}
 
 	uint8* stagingData = (uint8*)stagingBuffer->Map();
-	memcpy(stagingData, _worldData._primitives.data(), nbPrimitives * sizeof(VboPrimitive));
+	memcpy(stagingData, _worldData->_primitives.data(), nbPrimitives * sizeof(VboPrimitive));
 
 	auto vectorCopy = [](const float* in, float* out)
 		{
@@ -334,12 +334,12 @@ bool VertexBuffer::UploadWorld()
 			out[2] = in[2];
 		};
 
-	mat3* positions = (mat3*)(stagingData + _worldData._vertexDataOffset);
+	mat3* positions = (mat3*)(stagingData + _worldData->_vertexDataOffset);
 	for (uint32 primIdx = 0; primIdx < nbPrimitives; ++primIdx)
 	{
-		vectorCopy(_worldData._primitives[primIdx].pos0, positions[primIdx][0]);
-		vectorCopy(_worldData._primitives[primIdx].pos1, positions[primIdx][1]);
-		vectorCopy(_worldData._primitives[primIdx].pos2, positions[primIdx][2]);
+		vectorCopy(_worldData->_primitives[primIdx].pos0, positions[primIdx][0]);
+		vectorCopy(_worldData->_primitives[primIdx].pos1, positions[primIdx][1]);
+		vectorCopy(_worldData->_primitives[primIdx].pos2, positions[primIdx][2]);
 	}
 
 	stagingBuffer->Unmap();
@@ -361,9 +361,9 @@ bool VertexBuffer::UploadWorld()
 	QUEUE_BUFFER_BARRIER(cmds, barrier);
 
 	{
-		VO_TRY(BuildModelBlas(cmds, _worldData._opaqueGeom, _worldData._vertexDataOffset, *_worldBuffer));
-		VO_TRY(BuildModelBlas(cmds, _worldData._transparentGeom, _worldData._vertexDataOffset, *_worldBuffer));
-		VO_TRY(BuildModelBlas(cmds, _worldData._maskedGeom, _worldData._vertexDataOffset, *_worldBuffer));
+		VO_TRY(BuildModelBlas(cmds, _worldData->_opaqueGeom, _worldData->_vertexDataOffset, *_worldBuffer));
+		VO_TRY(BuildModelBlas(cmds, _worldData->_transparentGeom, _worldData->_vertexDataOffset, *_worldBuffer));
+		VO_TRY(BuildModelBlas(cmds, _worldData->_maskedGeom, _worldData->_vertexDataOffset, *_worldBuffer));
 
 		/*
 		bsp_mesh->geom_opaque.instance_mask = AS_FLAG_OPAQUE;
@@ -379,9 +379,9 @@ bool VertexBuffer::UploadWorld()
 		bsp_mesh->geom_masked.sbt_offset = SBTO_MASKED;
 		*/
 
-		for (ModelDesc& model : _worldData._models)
+		for (ModelDesc& model : _worldData->_models)
 		{
-			VO_TRY(BuildModelBlas(cmds, model._geometry, _worldData._vertexDataOffset, *_worldBuffer));
+			VO_TRY(BuildModelBlas(cmds, model._geometry, _worldData->_vertexDataOffset, *_worldBuffer));
 
 			/*
 			model.geometry.instance_mask = model->transparent ? bsp_mesh->geom_transparent.instance_mask : bsp_mesh->geom_opaque.instance_mask;

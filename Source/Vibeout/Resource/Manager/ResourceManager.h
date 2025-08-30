@@ -8,6 +8,8 @@
 class ResourceManager : public Singleton<ResourceManager>
 {
 public:
+	~ResourceManager();
+
 	template <class T>
 	auto GetOrCreateHolder(const std::string& id) -> TypedResourceHolder<T>*;
 
@@ -26,7 +28,6 @@ TypedResourceHolder<T>* ResourceManager::GetOrCreateHolder(const std::string& id
 	if (it == _map.end())
 	{
 		TypedResourceHolder<T>* holder = new TypedResourceHolder<T>(id);
-		holder->AddRef();
 		_map[id] = holder;
 		return holder;
 	}

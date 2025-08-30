@@ -8,6 +8,7 @@ class Model
 {
 public:
 	Model(const std::string& id, bool& result);
+	~Model();
 	
 private:
 	bool Init(const std::string& id);

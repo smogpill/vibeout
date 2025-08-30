@@ -6,6 +6,7 @@
 #include "Game/Game.h"
 #include "Render/Renderer.h"
 #include "Physics/PhysicsWorld.h"
+#include "Vibeout/Resource/Manager/ResourceManager.h"
 
 void ToggleFullscreen(SDL_Window* window)
 {
@@ -26,19 +27,20 @@ int main(int argc, char* argv[])
     SDL_SetMainReady();
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        VO_ERROR("SDL could not initialize! SDL_Error: {}", SDL_GetError());
         return 1;
     }
 
     SDL_Window* window = SDL_CreateWindow("Vibeout", 1024, 768, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (!window)
     {
-        printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        VO_ERROR("Window could not be created! SDL_Error: {}", SDL_GetError());
         SDL_Quit();
         return 1;
     }
 
     {
+        ResourceManager resourceManager;
         PhysicsWorld physicsWorld;
         Game game;
         game.SetWorld("Rugged");
@@ -47,7 +49,7 @@ int main(int argc, char* argv[])
         Renderer renderer(*window, game, result);
         if (!result)
         {
-            printf("Could not create the renderer");
+            VO_ERROR("Could not create the renderer");
             SDL_DestroyWindow(window);
             SDL_Quit();
             return 1;

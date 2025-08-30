@@ -36,6 +36,11 @@ Model::Model(const std::string& id, bool& result)
     result = Init(id);
 }
 
+Model::~Model()
+{
+
+}
+
 bool Model::Init(const std::string& id)
 {
     tinyobj::attrib_t attrib;

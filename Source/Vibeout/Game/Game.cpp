@@ -5,8 +5,6 @@
 #include "Game.h"
 #include "Vibeout/World/World.h"
 #include "Vibeout/Game/Camera/Camera.h"
-
-// Temp
 #include "Vibeout/Resource/Model/Model.h"
 
 const float Game::s_fixedTimeStep = 1.0f / 60.0f;
@@ -18,7 +16,7 @@ Game::Game()
 	// Spawn pos
 	_camera->SetTranslation(glm::dvec3(0, 2, 0));
 
-	//_model = Model::Load("Assets/Big/Models/Feisar/feisar_prototype.obj");
+	LoadCraftModels();
 }
 Game::~Game()
 {
@@ -60,4 +58,19 @@ void Game::OnMouseMotion(float xrel, float yrel)
 
 void Game::FixedUpdate(float deltaTime)
 {
+}
+
+void Game::LoadCraftModels()
+{
+	VO_ASSERT(_craftModels.empty());
+	const char* modelIds[] =
+	{
+		"Assets/Big/Models/Feisar/feisar_prototype.obj"
+	};
+	for (const char* modelId : modelIds)
+	{
+		ResourceHandle<Model> handle;
+		handle.LoadAsync(modelId, [](bool) {});
+		_craftModels.emplace_back(std::move(handle));
+	}
 }

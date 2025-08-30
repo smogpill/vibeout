@@ -19,6 +19,7 @@
 #include <utility>
 #include <filesystem>
 #include <memory>
+#include <future>
 
 #define GLM_FORCE_XYZW_ONLY
 #include <glm/vec2.hpp>

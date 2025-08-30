@@ -4,9 +4,8 @@
 #pragma once
 #include "Vibeout/Game/GameBase.h"
 #include "Vibeout/Base/Singleton.h"
+#include "Vibeout/Resource/Resource.h"
 class Map; class Craft; class World; class Camera;
-
-// Temp
 class Model;
 
 class Game : public Singleton<Game>
@@ -28,6 +27,7 @@ public:
 
 private:
 	void FixedUpdate(float deltaTime);
+	void LoadCraftModels();
 
 	static const float s_fixedTimeStep;
 
@@ -37,8 +37,6 @@ private:
 	Camera* _camera = nullptr;
 	float _deltaTime = 0.0f;
 	float _fixedUpdateAccumulator = 0.0f;
-	
 
-	// Temp
-	Model* _model = nullptr;
+	std::vector<ResourceHandle<Model>> _craftModels;
 };

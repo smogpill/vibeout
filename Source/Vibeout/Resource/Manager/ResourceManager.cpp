@@ -4,20 +4,10 @@
 #include "PCH.h"
 #include "ResourceManager.h"
 
-ResourceHolder::ResourceHolder(const std::string& id)
-	: _id(id)
+ResourceManager::~ResourceManager()
 {
-}
-
-void ResourceHolder::WaitReady()
-{
-	VO_ASSERT(false);
-}
-
-void ResourceHolder::OnAllRefsRemoved()
-{
-	VO_ASSERT(ResourceManager::s_instance);
-	ResourceManager::s_instance->DestroyHolder(*this);
+	std::scoped_lock lock(_mutex);
+	VO_ASSERT(_map.empty());
 }
 
 void ResourceManager::DestroyHolder(ResourceHolder& holder)
@@ -26,5 +16,4 @@ void ResourceManager::DestroyHolder(ResourceHolder& holder)
 	auto it = _map.find(holder.GetId());
 	_map.erase(it);
 	_mutex.unlock();
-	delete &holder;
 }

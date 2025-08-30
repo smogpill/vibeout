@@ -1313,6 +1313,7 @@ bool Renderer::LoadWorld()
     //bsp_mesh_register_textures(bsp);
     //bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
     //_VK(vkpt_vertex_buffer_upload_bsp_mesh(&vkpt_refdef.bsp_mesh_world));
+    return true;
 }
 
 void Renderer::OnWindowResized()
