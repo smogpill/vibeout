@@ -4,7 +4,7 @@
 #include "PCH.h"
 #include "Map.h"
 #include "Vibeout/Resource/Manager/ResourceManager.h"
-#include "Vibeout/Map/MapResource.h"
+#include "Vibeout/Game/Map/MapResource.h"
 
 Map::Map(const char* name)
 {

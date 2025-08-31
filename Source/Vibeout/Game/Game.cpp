@@ -4,7 +4,7 @@
 #include "PCH.h"
 #include "Game.h"
 #include "Vibeout/World/World.h"
-#include "Vibeout/Map/Map.h"
+#include "Vibeout/Game/Map/Map.h"
 #include "Vibeout/Game/Camera/Camera.h"
 #include "Vibeout/Resource/Model/Model.h"
 #include "Vibeout/Resource/Craft/CraftPack.h"
