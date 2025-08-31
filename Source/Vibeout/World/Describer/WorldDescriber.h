@@ -3,17 +3,16 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Describer.h"
-#include "Vibeout/World/Heightmap/Heightmap.h"
-class World;
+class World; class Terrain;
 
 class WorldDescriber final : public Describer
 {
 public:
 	WorldDescriber(const World& world);
 
-	OverlapType OverlapsNormalizedAABB(const AABB& aabb) const override;
+	auto OverlapsNormalizedAABB(const AABB& aabb) const -> OverlapType override;
 
 private:
 	const World& _world;
-	const Heightmap* _heightmap = nullptr;
+	const Terrain* _terrain = nullptr;
 };

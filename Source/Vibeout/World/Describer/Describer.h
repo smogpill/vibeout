@@ -17,7 +17,7 @@ public:
 	virtual ~Describer() = default;
 
 	//virtual bool Overlaps(const glm::ivec3& coords, uint level) const = 0;
-	virtual OverlapType OverlapsNormalizedAABB(const AABB& aabb) const = 0;
+	virtual auto OverlapsNormalizedAABB(const AABB& aabb) const -> OverlapType = 0;
 protected:
 	//auto ConvertCoordsToLocalAABB(const glm::ivec3& coords, uint level) const -> AABB;
 };

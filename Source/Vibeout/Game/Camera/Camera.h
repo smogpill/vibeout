@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Vibeout/Math/Transform.h"
-#include "Vibeout/World/Node.h"
+#include "Vibeout/World/Node/Node.h"
 
 class Camera
 {
@@ -12,12 +12,11 @@ public:
 	void SetTranslation(const glm::dvec3& pos);
 	void SetAspectRatio(float aspectRatio);
 	void OnUpdate(float deltaTime);
-
-	const Node& GetNode() const { return _node; }
-	glm::dmat4 GetViewMatrix() const;
-	glm::mat4 GetProjectionMatrix() const;
+	auto GetNode() const -> const Node& { return _node; }
+	auto GetViewMatrix() const -> glm::dmat4;
+	auto GetProjectionMatrix() const -> glm::mat4;
 	/// In degrees
-	float GetVerticalFOV() const { return _verticalFOV; }
+	auto GetVerticalFOV() const -> float { return _verticalFOV; }
 
 private:
 	// Transform/Motion

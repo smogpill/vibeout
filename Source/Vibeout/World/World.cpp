@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
 #include "World.h"
-#include "Vibeout/World/Heightmap/Heightmap.h"
+#include "Vibeout/World/Terrain/Terrain.h"
 #include "Vibeout/World/Describer/WorldDescriber.h"
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctreeBuilder.h"
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctree.h"
@@ -17,15 +17,16 @@ World::World(const char* name, bool& result)
 World::~World()
 {
 	delete _tlas;
-	delete _heightmap;
+	delete _terrain;
 }
 
 bool World::Init()
 {
-	_path = (std::filesystem::path("Assets/Worlds") / _name).string();
+	const std::string mapId = std::string("Maps") + "/" + _name;
+	_path = (std::filesystem::path("Assets") / mapId).string();
 	std::string heightmapPath = (std::filesystem::path(_path) / "Heightmap.png").string();
 	bool result;
-	_heightmap = new Heightmap(heightmapPath.c_str(), result);
+	_terrain = new Terrain(heightmapPath.c_str(), result);
 	VO_TRY(result);
 	WorldDescriber describer(*this);
 	SparseOctreeBuilder builder;

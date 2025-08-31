@@ -4,6 +4,7 @@
 #include "PCH.h"
 #include "Game.h"
 #include "Vibeout/World/World.h"
+#include "Vibeout/Map/Map.h"
 #include "Vibeout/Game/Camera/Camera.h"
 #include "Vibeout/Resource/Model/Model.h"
 #include "Vibeout/Resource/Craft/CraftPack.h"
@@ -25,8 +26,11 @@ Game::~Game()
 	delete _camera;
 }
 
-void Game::SetWorld(const char* name)
+void Game::SetMap(const char* name)
 {
+	delete _map;
+	_map = new Map(name);
+	_map->LoadAsync([this](bool result) { OnMapLoadingDone(result); });
 	delete _world;
 	bool result;
 	_world = new World(name, result);
@@ -68,4 +72,8 @@ void Game::LoadResources()
 	_craftPack = resourceManager->GetHandle<CraftPack>("CraftPack");
 	_craftPack.LoadAsync();
 	_craftPack.AddCallback([](bool) {});
+}
+
+void Game::OnMapLoadingDone(bool result)
+{
 }

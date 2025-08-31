@@ -5,13 +5,4 @@
 
 class Craft
 {
-public:
-	void OnFixedUpdate()
-	{
-
-	}
-	void OnUpdate()
-	{
-
-	}
 };

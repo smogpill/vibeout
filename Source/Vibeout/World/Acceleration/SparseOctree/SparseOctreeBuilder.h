@@ -25,13 +25,12 @@ private:
 	static constexpr uint32 s_blockShift = std::popcount(s_indexMask);
 
 	void BuildOctree(uint32 nbLevels, const Describer& describer);
-
-	SparseOctree* Encode();
+	auto Encode() -> SparseOctree*;
 	bool IsNodeAlive(const Node& node) const;
-	uint32 CreateNode();
+	auto CreateNode() -> uint32;
 	void DestroyNode(uint32 node);
-	uint32 TryNodeSubstitution(uint32 nodePtr);
-	Node& GetNode(uint32 nodePtr);
+	auto TryNodeSubstitution(uint32 nodePtr) -> uint32;
+	auto GetNode(uint32 nodePtr) -> Node&;
 
 	std::vector<Node*> _nodeBlocks;
 	uint32 _firstFreeNode = uint32(-1);

@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
         ResourceManager resourceManager("Assets");
         PhysicsWorld physicsWorld;
         Game game;
-        game.SetWorld("Rugged");
+        game.SetMap("Rugged");
 
         bool result;
         Renderer renderer(*window, game, result);

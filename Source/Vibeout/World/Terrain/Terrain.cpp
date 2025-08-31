@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #include "PCH.h"
-#include "Heightmap.h"
+#include "Terrain.h"
 
-Heightmap::Heightmap(const char* path, bool& result)
+Terrain::Terrain(const char* path, bool& result)
 {
 	result = Init(path);
 }
 
-bool Heightmap::Init(const char* path)
+bool Terrain::Init(const char* path)
 {
 	int width, height, nbComponents;
 	uint16* data = stbi_load_16(path, &width, &height, &nbComponents, 1);

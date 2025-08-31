@@ -5,8 +5,7 @@
 #include "Vibeout/Game/GameBase.h"
 #include "Vibeout/Base/Singleton.h"
 #include "Vibeout/Resource/Resource.h"
-class Map; class Craft; class World; class Camera;
-class Model; class CraftPack;
+class Map; class Craft; class World; class Camera; class Model; class CraftPack;
 
 class Game : public Singleton<Game>
 {
@@ -14,24 +13,25 @@ public:
 	Game();
 	~Game();
 
-	void SetWorld(const char* name);
-
+	void SetMap(const char* name);
 	void Update(float deltaTime);
-	float GetDeltaTime() const { return _deltaTime; }
-	Camera& GetCamera() { return *_camera; }
-	const GameState& GetState() const { return _state; }
+	auto GetDeltaTime() const -> float { return _deltaTime; }
+	auto GetCamera() -> Camera& { return *_camera; }
+	auto GetState() const -> const GameState& { return _state; }
 	void OnMouseMotion(float xrel, float yrel);
-	World* GetWorld() const { return _world; }
+	auto GetWorld() const -> World* { return _world; }
 
 	static inline Game* _instance = nullptr;
 
 private:
 	void FixedUpdate(float deltaTime);
 	void LoadResources();
+	void OnMapLoadingDone(bool result);
 
 	static const float s_fixedTimeStep;
 
 	GameState _state = GameState::NONE;
+	Map* _map = nullptr;
 	World* _world = nullptr;
 	Craft* _craft = nullptr;
 	Camera* _camera = nullptr;

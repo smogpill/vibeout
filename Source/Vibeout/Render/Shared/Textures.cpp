@@ -8,7 +8,7 @@
 #include "Vibeout/Render/Buffer/Buffer.h"
 #include "Vibeout/Game/Game.h"
 #include "Vibeout/World/World.h"
-#include "Vibeout/World/Heightmap/Heightmap.h"
+#include "Vibeout/World/Terrain/Terrain.h"
 #include "Vibeout/Base/Utils.h"
 
 Textures::Textures(Renderer& renderer, bool& result)
@@ -432,7 +432,7 @@ bool Textures::InitHeightmap()
 
 	const World* world = _renderer._game.GetWorld();
 	VO_TRY(world);
-	const Heightmap* heightmap = world->GetHeightmap();
+	const Terrain* heightmap = world->GetTerrain();
 	VO_TRY(heightmap);
 
 	const std::vector<uint16>& data = heightmap->Data();

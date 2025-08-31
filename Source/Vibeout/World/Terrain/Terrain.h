@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-class Heightmap
+class Terrain
 {
 public:
-	Heightmap(const char* path, bool& result);
+	Terrain(const char* path, bool& result);
 	auto Size() -> glm::ivec3& { return _size; }
 	auto Size() const -> const glm::ivec3& { return _size; }
 	auto Data() const -> const std::vector<uint16>& { return _data; }
