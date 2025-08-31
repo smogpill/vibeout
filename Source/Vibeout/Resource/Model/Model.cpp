@@ -40,6 +40,7 @@ Model::~Model()
 
 bool Model::OnLoad(ResourceLoader& loader)
 {
+    VO_TRY(Base::OnLoad(loader));
     const std::filesystem::path path = loader.GetAssetPath();
 
     tinyobj::attrib_t attrib;

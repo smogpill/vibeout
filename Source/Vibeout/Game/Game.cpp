@@ -66,6 +66,6 @@ void Game::LoadResources()
 {
 	ResourceManager* resourceManager = ResourceManager::s_instance;
 	_craftPack = resourceManager->GetHandle<CraftPack>("CraftPack");
-	_craftPack.AddCallback([](bool) {});
 	_craftPack.LoadAsync();
+	_craftPack.AddCallback([](bool) {});
 }

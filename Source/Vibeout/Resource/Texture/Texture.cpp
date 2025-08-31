@@ -12,6 +12,7 @@ Texture::~Texture()
 
 bool Texture::OnLoad(ResourceLoader& loader)
 {
+	VO_TRY(Base::OnLoad(loader));
 	const std::string& path = loader.GetAssetPath();
 
 	const int sixteenBits = stbi_is_16_bit(path.c_str()) != 0;

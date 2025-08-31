@@ -24,3 +24,18 @@ void ResourceManager::DestroyHolder(ResourceHolder& holder)
 	_map.erase(it);
 	_mutex.unlock();
 }
+
+ResourceHolder* ResourceManager::GetOrCreateHolder(const std::string& id)
+{
+	auto it = _map.find(id);
+	if (it == _map.end())
+	{
+		ResourceHolder* holder = new ResourceHolder(id);
+		_map[id] = holder;
+		return holder;
+	}
+	else
+	{
+		return it->second;
+	}
+}

@@ -5,10 +5,11 @@
 #include "Vibeout/Resource/Resource.h"
 class ResourceLoader; class Model;
 
-class CraftPack
+class CraftPack : public Resource
 {
+	using Base = Resource;
 public:
-	bool OnLoad(ResourceLoader& loader);
+	bool OnLoad(ResourceLoader& loader) override;
 
 private:
 	std::vector<ResourceHandle<Model>> _models;

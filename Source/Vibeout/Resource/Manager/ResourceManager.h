@@ -20,8 +20,7 @@ public:
 private:
 	friend class ResourceHolder;
 
-	template <class T>
-	auto GetOrCreateHolder(const std::string& id) -> TypedResourceHolder<T>*;
+	auto GetOrCreateHolder(const std::string& id) -> ResourceHolder*;
 	void DestroyHolder(ResourceHolder& holder);
 
 	mutable std::mutex _mutex;
@@ -33,21 +32,5 @@ template <class T>
 auto ResourceManager::GetHandle(const std::string& id) -> ResourceHandle<T>
 {
 	std::scoped_lock lock(_mutex);
-	return ResourceHandle<T>(GetOrCreateHolder<T>(id));
-}
-
-template <class T>
-TypedResourceHolder<T>* ResourceManager::GetOrCreateHolder(const std::string& id)
-{
-	auto it = _map.find(id);
-	if (it == _map.end())
-	{
-		TypedResourceHolder<T>* holder = new TypedResourceHolder<T>(id);
-		_map[id] = holder;
-		return holder;
-	}
-	else
-	{
-		return static_cast<TypedResourceHolder<T>*>(it->second);
-	}
+	return ResourceHandle<T>(GetOrCreateHolder(id));
 }

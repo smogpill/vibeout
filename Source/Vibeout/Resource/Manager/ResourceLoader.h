@@ -26,6 +26,6 @@ auto ResourceLoader::AddDependency(const std::string& id) -> ResourceHandle<T>
 	ResourceHandle<T> handle = manager->GetHandle<T>(id);
 	handle._holder->_loadingParent = &_holder;
 	_holder.AddLoadingDependency();
-	handle._holder->LoadAsync();
+	handle.LoadAsync();
 	return handle;
 }

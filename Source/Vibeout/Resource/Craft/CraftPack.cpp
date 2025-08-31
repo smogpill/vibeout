@@ -9,6 +9,7 @@
 
 bool CraftPack::OnLoad(ResourceLoader& loader)
 {
+	VO_TRY(Base::OnLoad(loader));
 	const char* modelIds[] =
 	{
 		"Big/Models/Feisar/feisar_prototype.obj"

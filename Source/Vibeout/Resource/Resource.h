@@ -8,6 +8,8 @@ class Resource
 {
 public:
 	virtual ~Resource() {}
+
+	virtual bool OnLoad(ResourceLoader& loader) = 0 { return true; }
 };
 
 template <class T>
@@ -15,52 +17,30 @@ class ResourceHandle
 {
 public:
 	ResourceHandle() = default;
-	ResourceHandle(const ResourceHandle& other);
+	ResourceHandle(const ResourceHandle& other) : _holder(other._holder) {}
 	
 	//void ReloadAsync();
-	auto Get() -> T* { if (_holder) return _holder->Get(); else return nullptr; }
-	auto Get() const -> const T* { if (_holder) return _holder->Get(); else return nullptr; }
-	void Release();
-	void AddCallback(std::function<void(bool)> callback) { _holder->AddCallback(callback); }
+	auto Get() -> T* { if (_holder) return static_cast<T*>(_holder->Get()); else return nullptr; }
+	auto Get() const -> const T* { if (_holder) return static_cast<const T*>(_holder->Get()); else return nullptr; }
+	void Release() { _holder.Release(); }
+	void AddCallback(std::function<void(bool)> callback) { VO_ASSERT(_holder); _holder->AddCallback(callback); }
 	void LoadAsync();
 
-	auto operator=(const ResourceHandle& other) -> ResourceHandle&;
+	auto operator=(const ResourceHandle& other) -> ResourceHandle& { _holder = other._holder; return *this; }
 	operator bool() const { return _holder != nullptr; }
 
 private:
 	friend class ResourceManager;
 	friend class ResourceLoader;
-	using Holder = TypedResourceHolder<T>;
 
-	ResourceHandle(Holder* holder) : _holder(holder) {}
+	ResourceHandle(ResourceHolder* holder) : _holder(holder) {}
 
-	RefPtr<Holder> _holder;
+	RefPtr<ResourceHolder> _holder;
 };
-
-template <class T>
-void ResourceHandle<T>::Release()
-{
-	_holder.Release();
-}
-
-template <class T>
-ResourceHandle<T>::ResourceHandle(const ResourceHandle& other)
-	: _holder(other._holder)
-{
-}
-
-template <class T>
-ResourceHandle<T>& ResourceHandle<T>::operator=(const ResourceHandle& other)
-{
-	_holder = other._holder;
-	return *this;
-}
 
 template <class T>
 void ResourceHandle<T>::LoadAsync()
 {
 	if (_holder)
-	{
-		_holder->LoadAsync();
-	}
+		_holder->LoadAsync([]() { return new T(); });
 }

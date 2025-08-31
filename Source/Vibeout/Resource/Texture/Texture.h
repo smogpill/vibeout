@@ -2,14 +2,16 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
+#include "Vibeout/Resource/Resource.h"
 class ResourceLoader;
 
-class Texture
+class Texture : public Resource
 {
+	using Base = Resource;
 public:
 	~Texture();
 
-	bool OnLoad(ResourceLoader& loader);
+	bool OnLoad(ResourceLoader& loader) override;
 
 	auto GetBuffer() const -> const void* { return _buffer; }
 	uint GetWidth() const { return _width; }
@@ -18,8 +20,6 @@ public:
 	bool Is16Bits() const { return _16Bits; }
 
 private:
-	bool Init(const std::string& id);
-
 	uint8* _buffer = nullptr;
 	uint _width = 0;
 	uint _height = 0;
