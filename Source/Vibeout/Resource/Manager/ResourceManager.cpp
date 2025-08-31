@@ -24,12 +24,3 @@ void ResourceManager::DestroyHolder(ResourceHolder& holder)
 	_map.erase(it);
 	_mutex.unlock();
 }
-
-bool ResourceManager::Load(ResourceHolder& holder)
-{
-	ResourceLoader loader(holder);
-	holder.AddLoadingDependency();
-	const bool result = holder.Load(loader);
-	holder.RemoveLoadingDependency();
-	return result;
-}

@@ -39,6 +39,7 @@ public:
 	auto operator=(T* ptr) -> RefPtr&;
 	auto operator->() const -> T* { return _ptr; }
 	auto operator*() const -> T& { VO_ASSERT(_ptr); return *_ptr; }
+	operator bool() const { return _ptr != nullptr; }
 
 private:
 	T* _ptr = nullptr;

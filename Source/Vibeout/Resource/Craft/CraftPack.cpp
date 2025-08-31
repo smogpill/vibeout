@@ -15,7 +15,7 @@ bool CraftPack::OnLoad(ResourceLoader& loader)
 	};
 	for (const char* modelId : modelIds)
 	{
-		ResourceHandle<Model> handle = loader.AddDependency<Model>(modelId, [](bool) {});
+		ResourceHandle<Model> handle = loader.AddDependency<Model>(modelId);
 		_models.emplace_back(std::move(handle));
 	}
 	return true;

@@ -10,8 +10,8 @@ class ResourceLoader
 {
 public:
 	ResourceLoader(ResourceHolder& holder);
-	template <class T, class F>
-	auto AddDependency(const std::string& id, F&& onDone) -> ResourceHandle<T>;
+	template <class T>
+	auto AddDependency(const std::string& id) -> ResourceHandle<T>;
 	auto GetId() const -> const std::string&;
 	auto GetAssetPath() const -> std::string;
 
@@ -19,12 +19,13 @@ private:
 	ResourceHolder& _holder;
 };
 
-template <class T, class F>
-auto ResourceLoader::AddDependency(const std::string& id, F&& onDone) -> ResourceHandle<T>
+template <class T>
+auto ResourceLoader::AddDependency(const std::string& id) -> ResourceHandle<T>
 {
 	ResourceManager* manager = ResourceManager::s_instance;
-	ResourceHandle<T> handle = manager->LoadAsync<T>(id, onDone);
-	//handle._holder->_loadingParent = &_holder;
+	ResourceHandle<T> handle = manager->GetHandle<T>(id);
+	handle._holder->_loadingParent = &_holder;
 	_holder.AddLoadingDependency();
+	handle._holder->LoadAsync();
 	return handle;
 }

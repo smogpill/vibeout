@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <deque>
 #include <unordered_map>
 #include <algorithm>
 #include <string>
@@ -21,6 +22,10 @@
 #include <memory>
 #include <future>
 #include <thread>
+#include <coroutine>
+#include <mutex>
+#include <condition_variable>
+#include <optional>
 
 #define GLM_FORCE_XYZW_ONLY
 #include <glm/vec2.hpp>

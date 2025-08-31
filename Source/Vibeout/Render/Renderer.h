@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Shared/Base.h"
+#include "Vibeout/Base/Singleton.h"
 class Shaders; class Textures; class Buffers; class VertexBuffer; class PathTracer;
 class Denoiser; class Bloom; class ToneMapping; class Draw; class Game; struct GlobalUniformBuffer;
 
@@ -26,7 +27,7 @@ template<> struct GetVkObjectType<VkFramebuffer> { static inline  VkObjectType _
 template<> struct GetVkObjectType<VkSampler> { static inline  VkObjectType _value = VK_OBJECT_TYPE_SAMPLER; };
 template<> struct GetVkObjectType<VkAccelerationStructureKHR> { static inline  VkObjectType _value = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR; };
 
-class Renderer
+class Renderer : public Singleton<Renderer>
 {
 public:
 	Renderer(SDL_Window& window, Game& game, bool& result);

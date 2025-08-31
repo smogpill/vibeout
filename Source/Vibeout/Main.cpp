@@ -6,6 +6,7 @@
 #include "Game/Game.h"
 #include "Render/Renderer.h"
 #include "Physics/PhysicsWorld.h"
+#include "Vibeout/Base/Job/JobSystem.h"
 #include "Vibeout/Resource/Manager/ResourceManager.h"
 
 void ToggleFullscreen(SDL_Window* window)
@@ -40,6 +41,7 @@ int main(int argc, char* argv[])
     }
 
     {
+        JobSystem jobSystem;
         ResourceManager resourceManager("Assets");
         PhysicsWorld physicsWorld;
         Game game;
