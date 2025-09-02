@@ -32,6 +32,7 @@ public:
 	explicit RefPtr(T* ptr) : _ptr(ptr) { if (_ptr) _ptr->AddRef(); }
 	~RefPtr() { Release(); }
 
+	auto Get() const -> T* { return _ptr; }
 	void Release() { if (_ptr) _ptr->RemoveRef(); }
 
 	auto operator=(const RefPtr& other) -> RefPtr&;
@@ -39,6 +40,8 @@ public:
 	auto operator=(T* ptr) -> RefPtr&;
 	auto operator->() const -> T* { return _ptr; }
 	auto operator*() const -> T& { VO_ASSERT(_ptr); return *_ptr; }
+	bool operator==(const T* p) const { return _ptr == p; }
+	bool operator!=(const T* p) const { return _ptr != p; }
 	operator bool() const { return _ptr != nullptr; }
 
 private:
