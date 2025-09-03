@@ -3,9 +3,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-enum class CameraType
+class Player
 {
-	GAME,
-	FREE,
-	END
+public:
+
 };

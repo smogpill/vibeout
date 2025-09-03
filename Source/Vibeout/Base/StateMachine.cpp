@@ -12,7 +12,7 @@ State::State(StateID id)
 State::~State()
 {
 	if (_currentState)
-		_currentState->OnExit(nullptr);
+		_currentState->OnExit(nullptr, StateMessage());
 }
 
 void State::AddState(State& state)
@@ -36,7 +36,7 @@ void State::HandleEvent(const StateEvent& event)
 		_currentState->OnEvent(event);
 }
 
-void State::SetCurrentState(StateID id)
+void State::SetCurrentState(StateID id, const StateMessage& message)
 {
 	if (_currentState && _currentState->GetId() == id)
 		return;
@@ -53,10 +53,10 @@ void State::SetCurrentState(StateID id)
 	}
 
 	if (_currentState)
-		_currentState->OnExit(nextState);
+		_currentState->OnExit(nextState, message);
 	_currentState = nextState;
 	if (_currentState)
-		_currentState->OnEnter(previousState);
+		_currentState->OnEnter(previousState, message);
 }
 
 auto State::GetState(StateID id) const -> State*
@@ -72,18 +72,18 @@ void LambdaState::OnUpdate()
 		_onUpdate();
 }
 
-void LambdaState::OnEnter(State* from)
+void LambdaState::OnEnter(State* from, const StateMessage& message)
 {
-	Base::OnEnter(from);
+	Base::OnEnter(from, message);
 	if (_onEnter)
-		_onEnter(from);
+		_onEnter(from, message);
 }
 
-void LambdaState::OnExit(State* to)
+void LambdaState::OnExit(State* to, const StateMessage& message)
 {
 	if (_onExit)
-		_onExit(to);
-	Base::OnExit(to);
+		_onExit(to, message);
+	Base::OnExit(to, message);
 }
 
 void LambdaState::OnEvent(const StateEvent& event)
