@@ -15,22 +15,20 @@ const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 
 Game::Game()
 {
-	_world = new World();
+	_stateMachine = new GameStateMachine();
 
 	_camera = new Camera();
 	// Spawn pos
 	_camera->SetTranslation(glm::dvec3(0, 2, 0));
-
-	_stateMachine = new GameStateMachine();
 }
 Game::~Game()
 {
-	delete _stateMachine;
+	delete _map;
 	delete _camera;
-	delete _world;
+	delete _stateMachine;
 }
 
-void Game::SetMapName(const char* name)
+void Game::SetMapName(const std::string& name)
 {
 	_mapName = name;
 }
@@ -41,8 +39,9 @@ void Game::SetAndGiveMap(Map* map)
 	_map = map;
 	if (_map)
 	{
-		_world->SetTerrain(_map->GetTerrain());
-		_world->RebuildStaticTLAS();
+		World* world = World::s_instance;
+		world->SetTerrain(_map->GetTerrain());
+		world->RebuildStaticTLAS();
 	}
 }
 
