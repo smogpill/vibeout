@@ -208,4 +208,5 @@ private:
 	//----------------------------
 	uint32 _lastTerrainVersion = 0;
 	uint32 _lastStaticTlasVersion = 0;
+	bool _terrainRegistered = false;
 };

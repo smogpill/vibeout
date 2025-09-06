@@ -39,6 +39,7 @@ struct GlobalUniformBuffer
 	SHARED_STRUCT_ATTRIB(ivec3, _worldMaskOrigin, {});
 	SHARED_STRUCT_ATTRIB(int, _currentFrameIdx, 0);
 
+	SHARED_STRUCT_ATTRIB(int, _drawTerrain, 0);
 	SHARED_STRUCT_ATTRIB(int, _width, 0);
 	SHARED_STRUCT_ATTRIB(int, _height, 0);
 	SHARED_STRUCT_ATTRIB(float, _invWidth, 0.0f);

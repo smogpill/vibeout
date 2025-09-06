@@ -177,7 +177,10 @@ bool CastContent(in Ray ray, inout CastResult result)
 	//float sphereRadius = 1.0f;
 	//CastSphere(ray, sphereCenter, sphereRadius, result);
 	//ray._maxDist = min(result._t, ray._maxDist);
-	return CastTerrain(ray, result);
+	if (_globalUBO._drawTerrain == 1)
+		return CastTerrain(ray, result);
+	else
+		return false;
 }
 
 void CastTLAS(in Ray ray, inout CastResult result)

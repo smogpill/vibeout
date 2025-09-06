@@ -1204,10 +1204,12 @@ bool Renderer::UpdateTerrain()
     if (_lastTerrainVersion == version)
         return true;
     _lastTerrainVersion = version;
+    _ubo->_drawTerrain = false;
     const Terrain* terrain = world->GetTerrain();
     if (terrain)
     {
         VO_TRY(_textures->RegisterTerrainTextures());
+        _ubo->_drawTerrain = true;
     }
     return true;
 }
