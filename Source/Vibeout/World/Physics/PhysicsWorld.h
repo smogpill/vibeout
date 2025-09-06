@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Jounayd ID SALAH
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "Vibeout/Physics/Base/PhysicsBase.h"
+#include "Vibeout/World/Physics/Base/PhysicsBase.h"
 #include "Vibeout/Base/Singleton.h"
 
 namespace JPH

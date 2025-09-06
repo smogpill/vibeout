@@ -8,7 +8,7 @@
 #include "Vibeout/World/Describer/WorldDescriber.h"
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctreeBuilder.h"
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctree.h"
-#include "Vibeout/Physics/PhysicsWorld.h"
+#include "Vibeout/World/Physics/PhysicsWorld.h"
 
 World::World()
 {
