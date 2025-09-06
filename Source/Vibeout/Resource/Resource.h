@@ -20,8 +20,7 @@ public:
 	ResourceHandle(const ResourceHandle& other) : _holder(other._holder) {}
 	
 	//void ReloadAsync();
-	auto Get() -> const T* { if (_holder) return static_cast<const T*>(_holder->Get()); else return nullptr; }
-	//auto Get() const -> const T* { if (_holder) return static_cast<const T*>(_holder->Get()); else return nullptr; }
+	auto Get() const -> const T* { if (_holder) return static_cast<const T*>(_holder->Get()); else return nullptr; }
 	void Release() { _holder.Release(); }
 	void AddCallback(std::function<void(bool)> callback) { VO_ASSERT(_holder); _holder->AddCallback(callback); }
 	void LoadAsync();

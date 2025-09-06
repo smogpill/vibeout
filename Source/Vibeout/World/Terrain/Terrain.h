@@ -11,7 +11,9 @@ public:
 	Terrain(const ResourceHandle<Texture>& heightmap, const ResourceHandle<Texture>& diffuse, bool& result);
 	auto Size() -> glm::ivec3& { return _size; }
 	auto Size() const -> const glm::ivec3& { return _size; }
-	auto Data() const -> const std::vector<uint16>& { return _data; }
+	auto GetHeightmapData() const -> const std::vector<uint16>& { return _data; }
+	auto GetHeightmapTex() const -> const ResourceHandle<Texture>& { return _heightmapTex; }
+	auto GetDiffuseTex() const -> const ResourceHandle<Texture>& { return _diffuseTex; }
 
 private:
 	bool Init();

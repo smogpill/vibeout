@@ -23,6 +23,7 @@ World::~World()
 void World::SetTerrain(Terrain* terrain)
 {
 	_terrain = terrain;
+	++_terrainVersion;
 }
 
 void World::RebuildStaticTLAS()
@@ -32,4 +33,5 @@ void World::RebuildStaticTLAS()
 	SparseOctreeBuilder builder;
 	_tlas = builder.Build(8, describer);
 	VO_ASSERT(_tlas);
+	++_staticTlasVersion;
 }

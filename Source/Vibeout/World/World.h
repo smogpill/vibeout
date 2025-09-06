@@ -14,7 +14,8 @@ public:
 
 	void SetTerrain(Terrain* terrain);
 	auto GetTerrain() const -> const Terrain* { return _terrain; }
-	auto GetVersion() const { return _version; }
+	auto GetTerrainVersion() const { return _terrainVersion; }
+	auto GetStaticTlasVersion() const { return _staticTlasVersion; }
 	auto GetTLAS() const { return _tlas; }
 	void RebuildStaticTLAS();
 
@@ -23,5 +24,6 @@ private:
 	SparseOctree* _tlas = nullptr;
 	Map* _map = nullptr;
 	PhysicsWorld* _physicsWorld = nullptr;
-	uint32 _version = 0;
+	uint32 _terrainVersion = 0;
+	uint32 _staticTlasVersion = 0;
 };

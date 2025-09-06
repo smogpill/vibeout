@@ -14,5 +14,6 @@ bool MapResource::OnLoad(ResourceLoader& loader)
     VO_TRY(std::filesystem::exists(assetPath), "The map path does not exist: {}", assetPath);
 
     _heightmapTex = loader.AddDependency<Texture>(id + "/Heightmap.png");
+    _diffuseTex = loader.AddDependency<Texture>(id + "/Diffuse.png");
     return true;
 }

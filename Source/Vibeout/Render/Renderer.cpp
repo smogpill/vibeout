@@ -821,7 +821,7 @@ bool Renderer::RenderContent()
     VO_ASSERT(!_frameReady);
 
     VO_TRY(UpdateUBO());
-    VO_TRY(UpdateWorldIfNeeded());
+    VO_TRY(UpdateWorld());
 
     const uint32 previousFrameInFlight = _currentFrameInFlight ? (_currentFrameInFlight - 1) : (maxFramesInFlight - 1);
     VkSemaphore transfer_semaphores = _semaphoreGroups[_currentFrameInFlight]._transferFinished;
@@ -1155,36 +1155,48 @@ bool Renderer::UpdateUBO()
     return true;
 }
 
-bool Renderer::UpdateWorldIfNeeded()
+bool Renderer::UpdateWorld()
 {
-    World* world = _game.GetWorld();
-    if (!world)
-    {
-        _lastWorldVersion = (uint32)-1;
-        return true;
-    }
-        
-    const uint32 worldVersion = world->GetVersion();
-    if (worldVersion == _lastWorldVersion)
-        return true;
-    
-    VO_TRY(UpdateTLAS());
+    World* world = World::s_instance;
+    VO_TRY(world);
 
-    _lastWorldVersion = worldVersion;
+    VO_TRY(UpdateTerrain());
+    VO_TRY(UpdateTLAS());
     return true;
 }
 
 bool Renderer::UpdateTLAS()
 {
-    VO_ASSERT(_buffers);
-    World* world = _game.GetWorld();
+    World* world = World::s_instance;
     VO_TRY(world);
+    const uint32 version = world->GetStaticTlasVersion();
+    if (_lastStaticTlasVersion == version)
+        return true;
+    _lastStaticTlasVersion = version;
+    VO_ASSERT(_buffers);
     const SparseOctree* octree = world->GetTLAS();
     VO_TRY(octree);
     const uint32 dataSize = octree->GetDataSize();
     void* stagingPtr = _buffers->AllocateInStaging(Buffers::BufferID::TLAS_NODES, 0, dataSize);
     VO_TRY(stagingPtr);
     memcpy(stagingPtr, octree->GetData(), dataSize);
+    _lastStaticTlasVersion = version;
+    return true;
+}
+
+bool Renderer::UpdateTerrain()
+{
+    World* world = World::s_instance;
+    VO_TRY(world);
+    const uint32 version = world->GetTerrainVersion();
+    if (_lastTerrainVersion == version)
+        return true;
+    _lastTerrainVersion = version;
+    const Terrain* terrain = world->GetTerrain();
+    if (terrain)
+    {
+        VO_TRY(_textures->RegisterTerrainTextures());
+    }
     return true;
 }
 

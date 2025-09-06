@@ -9,6 +9,7 @@
 #include "Vibeout/Game/Game.h"
 #include "Vibeout/World/World.h"
 #include "Vibeout/World/Terrain/Terrain.h"
+#include "Vibeout/Resource/Texture/Texture.h"
 #include "Vibeout/Base/Utils.h"
 
 Textures::Textures(Renderer& renderer, bool& result)
@@ -19,17 +20,18 @@ Textures::Textures(Renderer& renderer, bool& result)
 
 Textures::~Textures()
 {
+	VO_ASSERT(false);
 }
 
 const VkImage& Textures::GetImage(ImageID imageID) const
 {
-	assert((int)imageID < std::size(images));
+	VO_ASSERT((int)imageID < std::size(images));
 	return images[(int)imageID];
 }
 
 const VkImageView& Textures::GetImageView(ImageID imageID) const
 {
-	assert((int)imageID < std::size(images_views));
+	VO_ASSERT((int)imageID < std::size(images_views));
 	return images_views[(int)imageID];
 }
 
@@ -141,8 +143,6 @@ bool Textures::Init()
 	//SET_VK_NAME(desc_set_textures_odd, "Odd");
 
 	VO_TRY(InitBlueNoise());
-	VO_TRY(InitHeightmap());
-	VO_TRY(InitTerrainDiffuse());
 
 	return true;
 }
@@ -430,12 +430,12 @@ bool Textures::InitHeightmap()
 	const VkDevice device = _renderer.GetDevice();
 	VO_TRY(device);
 
-	const World* world = _renderer._game.GetWorld();
+	const World* world = World::s_instance;
 	VO_TRY(world);
-	const Terrain* heightmap = world->GetTerrain();
-	VO_TRY(heightmap);
+	const Terrain* terrain = world->GetTerrain();
+	VO_TRY(terrain);
 
-	const std::vector<uint16>& data = heightmap->Data();
+	const std::vector<uint16>& data = terrain->GetHeightmapData();
 	size_t img_size = data.size();
 	size_t total_size = img_size * sizeof(uint16_t);
 
@@ -451,7 +451,7 @@ bool Textures::InitHeightmap()
 	memcpy(mapped, data.data(), total_size);
 	buf_img_upload.Unmap();
 
-	const glm::ivec3& size = heightmap->Size();
+	const glm::ivec3& size = terrain->Size();
 
 	VkImageCreateInfo img_info =
 	{
@@ -592,18 +592,18 @@ bool Textures::InitTerrainDiffuse()
 	const VkDevice device = _renderer.GetDevice();
 	VO_TRY(device);
 
-	const World* world = _renderer._game.GetWorld();
+	World* world = World::s_instance;
 	VO_TRY(world);
 
-	int width, height, nbComponents;
+	const Terrain* terrain = world->GetTerrain();
+	const ResourceHandle<Texture>& diffuseRes = terrain->GetDiffuseTex();
+	const Texture* texture = diffuseRes.Get();
+	VO_TRY(texture);
+	VO_TRY(texture->GetNbComponents() == 4);
 
-	const std::string filePath = (std::filesystem::path(world->GetPath()) / "Diffuse.png").string();
-
-	uint8* data = stbi_load(filePath.c_str(), &width, &height, &nbComponents, STBI_rgb_alpha);
-	VO_TRY(data, "error loading tex {}\n", filePath);
-
-	size_t img_size = width * height;
-	size_t total_size = img_size * STBI_rgb_alpha;
+	const uint32 width = texture->GetWidth();
+	const uint32 height = texture->GetHeigth();
+	size_t total_size = texture->GetBufferSize8();
 
 	Buffer::Setup buf_img_upload_setup;
 	buf_img_upload_setup._size = total_size;
@@ -613,13 +613,13 @@ bool Textures::InitTerrainDiffuse()
 	Buffer buf_img_upload(_renderer, buf_img_upload_setup, result);
 	VO_TRY(result);
 
-	uint8* bn_tex = (uint8*)buf_img_upload.Map();
-	memcpy(bn_tex, data, total_size);
-
-	stbi_image_free(data);
-
-	buf_img_upload.Unmap();
-	bn_tex = nullptr;
+	// Copy content
+	{
+		uint8* bn_tex = (uint8*)buf_img_upload.Map();
+		memcpy(bn_tex, texture->GetBuffer(), total_size);
+		buf_img_upload.Unmap();
+		bn_tex = nullptr;
+	}
 
 	VkImageCreateInfo img_info =
 	{
@@ -1110,4 +1110,16 @@ void Textures::QueueImageBarrier(VkCommandBuffer commands, ImageID imageID, VkAc
 	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 	vkCmdPipelineBarrier(commands, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+bool Textures::RegisterTerrainTextures()
+{
+	VO_TRY(InitHeightmap());
+	VO_TRY(InitTerrainDiffuse());
+	return true;
+}
+
+void Textures::UnregisterTerrainTextures()
+{
+	VO_ASSERT(false);
 }

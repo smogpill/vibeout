@@ -21,6 +21,8 @@ public:
 	bool InitFramebufferImages();
 	void ShutdownFramebufferImages();
 	void QueueImageBarrier(VkCommandBuffer commands, ImageID imageID, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask);
+	bool RegisterTerrainTextures();
+	void UnregisterTerrainTextures();
 
 	const VkImage& GetImage(ImageID imageID) const;
 	const VkImageView& GetImageView(ImageID imageID) const;

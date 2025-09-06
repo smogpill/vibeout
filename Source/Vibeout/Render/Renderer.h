@@ -99,8 +99,9 @@ private:
 	void EndRender();
 
 	bool UpdateUBO();
-	bool UpdateWorldIfNeeded();
+	bool UpdateWorld();
 	bool UpdateTLAS();
+	bool UpdateTerrain();
 
 	auto BeginCommandBuffer(CommandBufferGroup& group) -> VkCommandBuffer;
 	bool SubmitCommandBuffer(VkCommandBuffer cmd_buf, VkQueue queue, int wait_semaphore_count, VkSemaphore* wait_semaphores,
@@ -206,5 +207,6 @@ private:
 
 	// World
 	//----------------------------
-	uint32 _lastWorldVersion = (uint32)-1;
+	uint32 _lastTerrainVersion = 0;
+	uint32 _lastStaticTlasVersion = 0;
 };

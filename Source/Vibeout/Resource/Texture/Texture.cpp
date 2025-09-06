@@ -24,28 +24,35 @@ bool Texture::OnLoad(ResourceLoader& loader)
 		return false;
 	}
 
+	int wantedNbComponents = nbComponentsInFile;
+	if (nbComponentsInFile == 3)
+	{
+		// Better compat with Vulkan. Though should be converted in the Renderer instead
+		wantedNbComponents = STBI_rgb_alpha;
+	}
+
 	if (sixteenBits)
 	{
-		stbi_us* result = stbi_load_16(path.c_str(), &width, &height, &nbComponentsInFile, nbComponentsInFile);
+		stbi_us* result = stbi_load_16(path.c_str(), &width, &height, &nbComponentsInFile, wantedNbComponents);
 		if (!result)
 		{
 			VO_ERROR("Failed to load {}: {}", loader.GetId(), stbi_failure_reason());
 			return false;
 		}
-		const uint64 size = width * height * nbComponentsInFile * sizeof(uint16);
+		const uint64 size = width * height * wantedNbComponents * sizeof(uint16);
 		_buffer = new uint8[size];
 		memcpy(_buffer, result, size);
 		stbi_image_free(result);
 	}
 	else
 	{
-		stbi_uc* result = stbi_load(path.c_str(), &width, &height, &nbComponentsInFile, nbComponentsInFile);
+		stbi_uc* result = stbi_load(path.c_str(), &width, &height, &nbComponentsInFile, wantedNbComponents);
 		if (!result)
 		{
 			VO_ERROR("Failed to load {}: {}", loader.GetId(), stbi_failure_reason());
 			return false;
 		}
-		const uint64 size = width * height * nbComponentsInFile * sizeof(uint8);
+		const uint64 size = width * height * wantedNbComponents * sizeof(uint8);
 		_buffer = new uint8[size];
 		memcpy(_buffer, result, size);
 		stbi_image_free(result);
@@ -53,7 +60,7 @@ bool Texture::OnLoad(ResourceLoader& loader)
 
 	_width = width;
 	_height = height;
-	_nbComponents = nbComponentsInFile;
+	_nbComponents = wantedNbComponents;
 	_16Bits = sixteenBits != 0;
 	return true;
 }

@@ -15,7 +15,7 @@ WorldDescriber::WorldDescriber(const World& world)
 
 auto WorldDescriber::OverlapsNormalizedAABB(const AABB& aabb) const -> OverlapType
 {
-	const std::vector<uint16>& data = _terrain->Data();
+	const std::vector<uint16>& data = _terrain->GetHeightmapData();
 	const glm::ivec3 size = _terrain->Size();
 	const glm::ivec3 aabbMin = glm::ivec3(aabb.Min() * glm::vec3(size));
 	const glm::ivec3 aabbMax = glm::min(glm::ivec3(aabb.Max() * glm::vec3(size)), size - 1);
