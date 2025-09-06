@@ -44,11 +44,8 @@ int main(int argc, char* argv[])
         JobSystem jobSystem;
         ResourceManager resourceManager("Assets");
         World world;
-        Game game;
-        game.SetMapName("Rugged");
-
         bool result;
-        Renderer renderer(*window, game, result);
+        Renderer renderer(*window, result);
         if (!result)
         {
             VO_ERROR("Could not create the renderer");
@@ -56,6 +53,9 @@ int main(int argc, char* argv[])
             SDL_Quit();
             return 1;
         }
+
+        Game game;
+        game.SetMapName("Rugged");
 
         uint64 lastTime = SDL_GetTicks();
         float deltaTime = 0.0f;

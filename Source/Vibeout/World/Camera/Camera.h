@@ -11,7 +11,7 @@ public:
 	void Rotate(float yaw, float pitch);
 	void SetTranslation(const glm::dvec3& pos);
 	void SetAspectRatio(float aspectRatio);
-	void OnUpdate(float deltaTime);
+	auto GetNode() -> Node& { return _node; }
 	auto GetNode() const -> const Node& { return _node; }
 	auto GetViewMatrix() const -> glm::dmat4;
 	auto GetProjectionMatrix() const -> glm::mat4;

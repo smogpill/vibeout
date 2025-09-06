@@ -30,7 +30,7 @@ template<> struct GetVkObjectType<VkAccelerationStructureKHR> { static inline  V
 class Renderer : public Singleton<Renderer>
 {
 public:
-	Renderer(SDL_Window& window, Game& game, bool& result);
+	Renderer(SDL_Window& window, bool& result);
 	~Renderer();
 
 	void Render();
@@ -121,7 +121,6 @@ private:
 	// Context
 	//----------------------------
 	SDL_Window& _window;
-	Game& _game;
 
 	// Options
 	//----------------------------

@@ -47,7 +47,7 @@
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_keyboard.h>
 
-//#define VMA_VULKAN_VERSION 1003000
+//#define VMA_VULKAN_VERSION 1004000
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 

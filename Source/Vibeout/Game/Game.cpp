@@ -4,8 +4,8 @@
 #include "PCH.h"
 #include "Game.h"
 #include "Vibeout/World/World.h"
+#include "Vibeout/World/Camera/Camera.h"
 #include "Vibeout/Game/Map/Map.h"
-#include "Vibeout/Game/Camera/Camera.h"
 #include "Vibeout/Game/States/GameStateMachine.h"
 #include "Vibeout/Resource/Model/Model.h"
 #include "Vibeout/Resource/Craft/CraftPack.h"
@@ -20,6 +20,8 @@ Game::Game()
 	_camera = new Camera();
 	// Spawn pos
 	_camera->SetTranslation(glm::dvec3(0, 2, 0));
+
+	World::s_instance->SetCamera(_camera);
 }
 Game::~Game()
 {
@@ -63,7 +65,6 @@ void Game::Update(float rawDeltaTime)
 		_fixedUpdateAccumulator -= s_fixedTimeStep;
 	}
 
-	_camera->OnUpdate(_deltaTime);
 	//const float interpolation = _fixedUpdateAccumulator / s_fixedTimeStep;
 }
 

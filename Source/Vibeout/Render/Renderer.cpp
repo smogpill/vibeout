@@ -5,7 +5,6 @@
 #include "Renderer.h"
 #include "Vibeout/Math/Transform.h"
 #include "Vibeout/Game/Game.h"
-#include "Vibeout/Game/Camera/Camera.h"
 #include "Vibeout/Render/Shared/Shaders.h"
 #include "Vibeout/Render/Shared/Textures.h"
 #include "Vibeout/Render/Shared/Buffers.h"
@@ -18,6 +17,7 @@
 #include "Vibeout/Render/Post/Draw.h"
 #include "Vibeout/World/World.h"
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctree.h"
+#include "Vibeout/World/Camera/Camera.h"
 
 const uint32 vulkanAPIversion = VK_API_VERSION_1_3;
 
@@ -96,9 +96,8 @@ void QueueImageBarrier(const VkCommandBuffer& cmds, const VkImageMemoryBarrier& 
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-Renderer::Renderer(SDL_Window& window, Game& game, bool& result)
+Renderer::Renderer(SDL_Window& window, bool& result)
     : _window(window)
-    , _game(game)
     , _ubo(new GlobalUniformBuffer())
 {
 	result = Init();
@@ -374,7 +373,12 @@ bool Renderer::InitLogicalDevice()
     const char* deviceExtensions[] =
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+        VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
     };
 
     VkPhysicalDeviceFeatures2 features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
@@ -384,6 +388,8 @@ bool Renderer::InitLogicalDevice()
     features12.runtimeDescriptorArray = VK_TRUE;
     features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     features12.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+    features12.descriptorIndexing = VK_TRUE;
+    features12.bufferDeviceAddress = VK_TRUE;
     features12.pNext = &features;
 
     VkDeviceCreateInfo deviceInfo{};
@@ -706,7 +712,8 @@ void Renderer::UpdateSizes()
     _extentScreenImages = GetScreenImageExtent();
     _extentTAAImages.width = std::max(_extentScreenImages.width, _extentUnscaled.width);
     _extentTAAImages.height = std::max(_extentScreenImages.height, _extentUnscaled.height);
-    _game.GetCamera().SetAspectRatio((float)_extentUnscaled.width / _extentUnscaled.height);
+    if (Game::s_instance)
+        Game::s_instance->GetCamera().SetAspectRatio((float)_extentUnscaled.width / _extentUnscaled.height);
 }
 
 void Renderer::EvaluateAASettings()
@@ -820,6 +827,8 @@ bool Renderer::RenderContent()
     VO_TRY(_graphicsQueue);
     VO_ASSERT(!_frameReady);
 
+    Game* game = Game::s_instance;
+
     VO_TRY(UpdateUBO());
     VO_TRY(UpdateWorld());
 
@@ -890,7 +899,7 @@ bool Renderer::RenderContent()
 
             if (_wantToneMapping)
             {
-                VO_CHECK(_toneMapping->RecordCommandBuffer(cmds, _game.GetDeltaTime()));
+                VO_CHECK(_toneMapping->RecordCommandBuffer(cmds, game->GetDeltaTime()));
             }
         }
 
@@ -947,13 +956,16 @@ bool Renderer::UpdateUBO()
     VO_ASSERT(_buffers);
     VO_ASSERT(_ubo);
 
-    Camera& camera = _game.GetCamera();
+    Game* game = Game::s_instance;
+    World* world = World::s_instance;
+    const Camera& camera = world->GetCamera();
 
-    const glm::mat4 view = camera.GetViewMatrix();
-    const glm::mat4 proj = camera.GetProjectionMatrix();
+    const glm::mat4& view = camera.GetViewMatrix();
+    const glm::mat4& proj = camera.GetProjectionMatrix();
     const Transform& camTransform = camera.GetNode().GetGlobalTransform();
-    const glm::vec3 camPos = camTransform.Translation();
     const float verticalFOV = glm::radians(camera.GetVerticalFOV());
+
+    const glm::vec3 camPos = camTransform.Translation();
 
     // Previous frame
     memcpy(_ubo->_prevView, _ubo->_view, sizeof(float) * 16);

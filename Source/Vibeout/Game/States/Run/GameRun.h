@@ -13,4 +13,7 @@ protected:
 	void OnEnter(StateMachine* from, const StateMessage& message) override;
 	void OnUpdate() override;
 	void OnExit(StateMachine* to, const StateMessage& message) override;
+
+private:
+	void UpdateCamera();
 };
