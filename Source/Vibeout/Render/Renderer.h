@@ -124,13 +124,13 @@ private:
 
 	// Options
 	//----------------------------
+	uint _nbBounceRays = 0;
 	bool _antiAliasing = false;
 	bool _wantHDR = false;
 	bool _wantVSYNC = false;
 	bool _wantDenoising = false;
 	bool _wantBloom = false;
 	bool _wantToneMapping = true;
-	uint _nbBounceRays = 0;
 
 	// State
 	//----------------------------

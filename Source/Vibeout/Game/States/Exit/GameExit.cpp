@@ -5,7 +5,7 @@
 #include "GameExit.h"
 #include "Vibeout/Game/Game.h"
 
-void GameExit::OnEnter(State* from, const StateMessage& message)
+void GameExit::OnEnter(StateMachine* from, const StateMessage& message)
 {
 	Base::OnEnter(from, message);
 }

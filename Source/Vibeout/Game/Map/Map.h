@@ -9,12 +9,15 @@ class MapResource;
 class Map
 {
 public:
-	Map(const char* name);
+	Map(const std::string& name);
+	~Map();
 
 	void LoadAsync(std::function<void(bool)> onDone);
+	auto GetTerrain() const -> Terrain* { return _terrain; }
 
 private:
 	void OnResourceLoaded(bool result);
+	bool InitTerrain();
 
 	ResourceHandle<MapResource> _resource;
 	Terrain* _terrain = nullptr;

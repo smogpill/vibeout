@@ -15,6 +15,8 @@ const float Game::s_fixedTimeStep = 1.0f / 60.0f;
 
 Game::Game()
 {
+	_world = new World();
+
 	_camera = new Camera();
 	// Spawn pos
 	_camera->SetTranslation(glm::dvec3(0, 2, 0));
@@ -25,20 +27,22 @@ Game::~Game()
 {
 	delete _stateMachine;
 	delete _camera;
+	delete _world;
 }
 
-void Game::SetMap(const char* name)
+void Game::SetMapName(const char* name)
+{
+	_mapName = name;
+}
+
+void Game::SetAndGiveMap(Map* map)
 {
 	delete _map;
-	_map = new Map(name);
-	delete _world;
-	bool result;
-	_world = new World(name, result);
-	if (!result)
+	_map = map;
+	if (_map)
 	{
-		VO_ERROR("Failed to set world: {}", name);
-		delete _world;
-		_world = nullptr;
+		_world->SetTerrain(_map->GetTerrain());
+		_world->RebuildStaticTLAS();
 	}
 }
 

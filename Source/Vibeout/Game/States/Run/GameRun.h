@@ -10,7 +10,7 @@ class GameRun : public GameState
 public:
 	GameRun() : Base(GameStateID::RUN) {}
 protected:
-	void OnEnter(State* from, const StateMessage& message) override;
+	void OnEnter(StateMachine* from, const StateMessage& message) override;
 	void OnUpdate() override;
-	void OnExit(State* to, const StateMessage& message) override;
+	void OnExit(StateMachine* to, const StateMessage& message) override;
 };

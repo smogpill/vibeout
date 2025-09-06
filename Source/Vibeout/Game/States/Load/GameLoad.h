@@ -11,10 +11,21 @@ class GameLoad : public GameState
 public:
 	GameLoad() : Base(GameStateID::LOAD) {}
 protected:
-	void OnEnter(State* from, const StateMessage& message) override;
+	void OnEnter(StateMachine* from, const StateMessage& message) override;
 	void OnUpdate() override;
-	void OnExit(State* to, const StateMessage& message) override;
+	void OnExit(StateMachine* to, const StateMessage& message) override;
 
 private:
-	void OnMapLoadingDone(bool result);
+	enum class LoadedFlag
+	{
+		MAP_LOADED,
+		END
+	};
+	void OnMapResourceLoadingDone(bool result);
+	void RegisterMap();
+	void AddLoadedFlag(LoadedFlag flag);
+	
+	Map* _map = nullptr;
+	std::mutex _mutex;
+	uint32 _loadedFlags = 0; // [_mutex]
 };

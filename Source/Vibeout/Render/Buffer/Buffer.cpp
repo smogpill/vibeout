@@ -110,7 +110,7 @@ bool Buffer::Init(const Setup& setup)
 
 	mem_alloc_info.pNext = &mem_alloc_flags;
 
-	VO_TRY_VK(vkAllocateMemory(device, &mem_alloc_info, NULL, &_memory));
+	VO_TRY_VK(vkAllocateMemory(device, &mem_alloc_info, nullptr, &_memory));
 	VO_ASSERT(_memory);
 
 	VO_TRY_VK(vkBindBufferMemory(device, _buffer, _memory, 0));

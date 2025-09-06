@@ -11,7 +11,7 @@ class GameBoot : public GameState
 public:
 	GameBoot() : Base(GameStateID::BOOT) {}
 protected:
-	void OnEnter(State* from, const StateMessage& message) override;
+	void OnEnter(StateMachine* from, const StateMessage& message) override;
 
 private:
 	void OnCraftPackLoadingDone(bool result);

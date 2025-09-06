@@ -11,7 +11,10 @@ class MapResource : public Resource
 public:
 
 	bool OnLoad(ResourceLoader& loader) override;
+	auto GetHeightmapTex() const -> const ResourceHandle<Texture>& { return _heightmapTex; }
+	auto GetDiffuseTex() const -> const ResourceHandle<Texture>& { return _diffuseTex; }
 
 private:
 	ResourceHandle<Texture> _heightmapTex;
+	ResourceHandle<Texture> _diffuseTex;
 };

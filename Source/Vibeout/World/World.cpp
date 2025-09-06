@@ -7,30 +7,29 @@
 #include "Vibeout/World/Describer/WorldDescriber.h"
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctreeBuilder.h"
 #include "Vibeout/World/Acceleration/SparseOctree/SparseOctree.h"
+#include "Vibeout/Physics/PhysicsWorld.h"
 
-World::World(const char* name, bool& result)
-	: _name(name)
+World::World()
 {
-	result = Init();
+	_physicsWorld = new PhysicsWorld();
 }
 
 World::~World()
 {
 	delete _tlas;
-	delete _terrain;
+	delete _physicsWorld;
 }
 
-bool World::Init()
+void World::SetTerrain(Terrain* terrain)
 {
-	const std::string mapId = std::string("Maps") + "/" + _name;
-	_path = (std::filesystem::path("Assets") / mapId).string();
-	std::string heightmapPath = (std::filesystem::path(_path) / "Heightmap.png").string();
-	bool result;
-	_terrain = new Terrain(heightmapPath.c_str(), result);
-	VO_TRY(result);
+	_terrain = terrain;
+}
+
+void World::RebuildStaticTLAS()
+{
+	delete _tlas; _tlas = nullptr;
 	WorldDescriber describer(*this);
 	SparseOctreeBuilder builder;
 	_tlas = builder.Build(8, describer);
-	VO_TRY(_tlas);
-	return true;
+	VO_ASSERT(_tlas);
 }

@@ -14,10 +14,12 @@ public:
 	bool OnLoad(ResourceLoader& loader) override;
 
 	auto GetBuffer() const -> const void* { return _buffer; }
+	auto GetBufferSize8() const -> uint32 { return _width * _height * _nbComponents * (_16Bits ? 2 : 1); }
 	uint GetWidth() const { return _width; }
 	uint GetHeigth() const { return _height; }
 	uint GetNbComponents() const { return _nbComponents; }
 	bool Is16Bits() const { return _16Bits; }
+	uint GetStrideBetweenTexels() const { return _nbComponents * (_16Bits ? 2 : 1); }
 
 private:
 	uint8* _buffer = nullptr;

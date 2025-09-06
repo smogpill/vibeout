@@ -4,7 +4,7 @@
 #include "PCH.h"
 #include "GameError.h"
 
-void GameError::OnEnter(State* from, const StateMessage& message)
+void GameError::OnEnter(StateMachine* from, const StateMessage& message)
 {
 	Base::OnEnter(from, message);
 	GetParent()->SetCurrentState(GameStateID::EXIT);

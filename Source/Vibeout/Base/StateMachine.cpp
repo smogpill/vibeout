@@ -4,46 +4,46 @@
 #include "PCH.h"
 #include "Vibeout/Base/StateMachine.h"
 
-State::State(StateID id)
+StateMachine::StateMachine(StateID id)
 	: _id(id)
 {
 }
 
-State::~State()
+StateMachine::~StateMachine()
 {
 	if (_currentState)
 		_currentState->OnExit(nullptr, StateMessage());
 }
 
-void State::AddState(State& state)
+void StateMachine::AddState(StateMachine& state)
 {
 	VO_ASSERT(GetState(state.GetId()) == nullptr);
 	_states.push_back(RefPtr(&state));
 	state._parent = this;
 }
 
-void State::Update()
+void StateMachine::Update()
 {
 	OnUpdate();
 	if (_currentState)
 		_currentState->Update();
 }
 
-void State::HandleEvent(const StateEvent& event)
+void StateMachine::HandleEvent(const StateEvent& event)
 {
 	OnEvent(event);
 	if (_currentState)
 		_currentState->OnEvent(event);
 }
 
-void State::SetCurrentState(StateID id, const StateMessage& message)
+void StateMachine::SetCurrentState(StateID id, const StateMessage& message)
 {
 	if (_currentState && _currentState->GetId() == id)
 		return;
 
-	State* previousState = _currentState;
-	State* nextState = nullptr;
-	for (RefPtr<State>& state : _states)
+	StateMachine* previousState = _currentState;
+	StateMachine* nextState = nullptr;
+	for (RefPtr<StateMachine>& state : _states)
 	{
 		if (state->_id == id)
 		{
@@ -59,34 +59,34 @@ void State::SetCurrentState(StateID id, const StateMessage& message)
 		_currentState->OnEnter(previousState, message);
 }
 
-auto State::GetState(StateID id) const -> State*
+auto StateMachine::GetState(StateID id) const -> StateMachine*
 {
-	auto it = std::ranges::find_if(_states, [id](const RefPtr<State>& state) { return state->_id == id; });
+	auto it = std::ranges::find_if(_states, [id](const RefPtr<StateMachine>& state) { return state->_id == id; });
 	return it != _states.end() ? it->Get() : nullptr;
 }
 
-void LambdaState::OnUpdate()
+void LambdaStateMachine::OnUpdate()
 {
 	Base::OnUpdate();
 	if (_onUpdate)
 		_onUpdate();
 }
 
-void LambdaState::OnEnter(State* from, const StateMessage& message)
+void LambdaStateMachine::OnEnter(StateMachine* from, const StateMessage& message)
 {
 	Base::OnEnter(from, message);
 	if (_onEnter)
 		_onEnter(from, message);
 }
 
-void LambdaState::OnExit(State* to, const StateMessage& message)
+void LambdaStateMachine::OnExit(StateMachine* to, const StateMessage& message)
 {
 	if (_onExit)
 		_onExit(to, message);
 	Base::OnExit(to, message);
 }
 
-void LambdaState::OnEvent(const StateEvent& event)
+void LambdaStateMachine::OnEvent(const StateEvent& event)
 {
 	Base::OnEvent(event);
 	if (_onEvent)

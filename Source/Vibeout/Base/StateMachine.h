@@ -37,59 +37,59 @@ private:
 	StateEventID _id = 0;
 };
 
-class State : public RefCounted<State>
+class StateMachine : public RefCounted<StateMachine>
 {
 public:
-	explicit State(StateID id);
+	explicit StateMachine(StateID id);
 	template <class T>
-	explicit State(const T& typedId) : State(static_cast<StateID>(typedId)) {}
-	virtual ~State();
+	explicit StateMachine(const T& typedId) : StateMachine(static_cast<StateID>(typedId)) {}
+	virtual ~StateMachine();
 
-	void AddState(State& state);
+	void AddState(StateMachine& state);
 	void SetCurrentState(StateID id, const StateMessage& message = StateMessage());
 	template <class T>
 	void SetCurrentState(const T& typedId, const StateMessage& message = StateMessage()) { SetCurrentState(static_cast<StateID>(typedId), message); }
 	template <class T>
-	auto GetState(const T& typedId) const -> State* { return GetState(static_cast<StateID>(typedId)); }
-	auto GetState(StateID id) const -> State*;
+	auto GetState(const T& typedId) const -> StateMachine* { return GetState(static_cast<StateID>(typedId)); }
+	auto GetState(StateID id) const -> StateMachine*;
 	auto GetId() const { return _id; }
 	template <class T>
 	auto GetTypedId() const { return static_cast<T>(_id); }
 	void Update();
 	void HandleEvent(const StateEvent& event);
-	auto GetParent() -> State* { return _parent; }
+	auto GetParent() -> StateMachine* { return _parent; }
 
 protected:
-	virtual void OnEnter(State* from, const StateMessage& message) {}
-	virtual void OnExit(State* to, const StateMessage& message) {}
+	virtual void OnEnter(StateMachine* from, const StateMessage& message) {}
+	virtual void OnExit(StateMachine* to, const StateMessage& message) {}
 	virtual void OnUpdate() {}
 	virtual void OnEvent(const StateEvent& event) {}
 
 private:
-	State* _parent = nullptr;
-	State* _currentState = nullptr;
+	StateMachine* _parent = nullptr;
+	StateMachine* _currentState = nullptr;
 	StateID _id = 0;
-	std::vector<RefPtr<State>> _states;
+	std::vector<RefPtr<StateMachine>> _states;
 };
 
-class LambdaState : public State
+class LambdaStateMachine : public StateMachine
 {
-	using Base = State;
+	using Base = StateMachine;
 public:
 	using OnUpdateFunc = std::function<void()>;
-	using OnEnterFunc = std::function<void(State*, const StateMessage&)>;
-	using OnExitFunc = std::function<void(State*, const StateMessage&)>;
+	using OnEnterFunc = std::function<void(StateMachine*, const StateMessage&)>;
+	using OnExitFunc = std::function<void(StateMachine*, const StateMessage&)>;
 	using OnEventFunc = std::function<void(const StateEvent&)>;
 
-	explicit LambdaState(StateID id) : Base(id) {}
+	explicit LambdaStateMachine(StateID id) : Base(id) {}
 	void SetOnUpdate(OnUpdateFunc func) { _onUpdate = func; }
 	void SetOnEnter(OnEnterFunc func) { _onEnter = func; }
 	void SetOnExit(OnExitFunc func) { _onExit = func; }
 	void SetOnEvent(OnEventFunc func) { _onEvent = func; }
 
 protected:
-	void OnEnter(State* from, const StateMessage& message) override;
-	void OnExit(State* to, const StateMessage& message) override;
+	void OnEnter(StateMachine* from, const StateMessage& message) override;
+	void OnExit(StateMachine* to, const StateMessage& message) override;
 	void OnUpdate() override;
 	void OnEvent(const StateEvent& event) override;
 

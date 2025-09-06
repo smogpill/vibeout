@@ -10,7 +10,7 @@ class GameError : public GameState
 public:
 	GameError() : Base(GameStateID::ERROR) {}
 protected:
-	void OnEnter(State* from, const StateMessage& message) override;
+	void OnEnter(StateMachine* from, const StateMessage& message) override;
 
 private:
 };

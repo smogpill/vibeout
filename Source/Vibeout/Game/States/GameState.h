@@ -16,9 +16,9 @@ enum class GameStateID
 	ERROR
 };
 
-class GameState : public State
+class GameState : public StateMachine
 {
-	using Base = State;
+	using Base = StateMachine;
 public:
 	using Base::Base;
 };

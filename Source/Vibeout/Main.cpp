@@ -5,7 +5,7 @@
 #include <SDL3/SDL_main.h>
 #include "Game/Game.h"
 #include "Render/Renderer.h"
-#include "Physics/PhysicsWorld.h"
+#include "World/World.h"
 #include "Vibeout/Base/Job/JobSystem.h"
 #include "Vibeout/Resource/Manager/ResourceManager.h"
 
@@ -43,9 +43,9 @@ int main(int argc, char* argv[])
     {
         JobSystem jobSystem;
         ResourceManager resourceManager("Assets");
-        PhysicsWorld physicsWorld;
+        World world;
         Game game;
-        game.SetMap("Rugged");
+        game.SetMapName("Rugged");
 
         bool result;
         Renderer renderer(*window, game, result);

@@ -1158,7 +1158,12 @@ bool Renderer::UpdateUBO()
 bool Renderer::UpdateWorldIfNeeded()
 {
     World* world = _game.GetWorld();
-    VO_TRY(world);
+    if (!world)
+    {
+        _lastWorldVersion = (uint32)-1;
+        return true;
+    }
+        
     const uint32 worldVersion = world->GetVersion();
     if (worldVersion == _lastWorldVersion)
         return true;

@@ -6,7 +6,7 @@
 #include "Vibeout/Resource/Manager/ResourceManager.h"
 #include "Vibeout/Game/Game.h"
 
-void GameBoot::OnEnter(State* from, const StateMessage& message)
+void GameBoot::OnEnter(StateMachine* from, const StateMessage& message)
 {
 	Base::OnEnter(from, message);
 	ResourceManager* resourceManager = ResourceManager::s_instance;

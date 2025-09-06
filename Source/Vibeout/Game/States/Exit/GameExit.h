@@ -10,7 +10,7 @@ class GameExit : public GameState
 public:
 	GameExit() : Base(GameStateID::EXIT) {}
 protected:
-	void OnEnter(State* from, const StateMessage& message) override;
+	void OnEnter(StateMachine* from, const StateMessage& message) override;
 
 private:
 };

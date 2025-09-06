@@ -14,7 +14,8 @@ public:
 	Game();
 	~Game();
 
-	void SetMap(const char* name);
+	void SetMapName(const char* name);
+	void SetAndGiveMap(Map* map);
 	void SetCraftPack(const ResourceHandle<CraftPack>& craftPack);
 	auto GetMap() const -> Map* { return _map; }
 	void Update(float deltaTime);
@@ -22,6 +23,7 @@ public:
 	auto GetCamera() -> Camera& { return *_camera; }
 	void OnMouseMotion(float xrel, float yrel);
 	auto GetWorld() const -> World* { return _world; }
+	auto GetMapName() const -> const std::string& { return _mapName; }
 
 	static inline Game* _instance = nullptr;
 
@@ -31,6 +33,7 @@ private:
 	static const float s_fixedTimeStep;
 
 	GameStateMachine* _stateMachine = nullptr;
+	std::string _mapName;
 	Map* _map = nullptr;
 	World* _world = nullptr;
 	Craft* _craft = nullptr;
