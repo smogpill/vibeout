@@ -142,6 +142,9 @@ bool Textures::Init()
 	//SET_VK_NAME(desc_set_textures_even, "Even");
 	//SET_VK_NAME(desc_set_textures_odd, "Odd");
 
+	VO_TRY(UpdateDescriptorSet(BINDING_OFFSET_HEIGHTMAP, tex_invalid_texture_image_view, tex_sampler));
+	VO_TRY(UpdateDescriptorSet(BINDING_OFFSET_TERRAIN_DIFFUSE, tex_invalid_texture_image_view, tex_sampler));
+
 	VO_TRY(InitBlueNoise());
 
 	return true;
@@ -151,6 +154,71 @@ void Textures::InvalidateTextureDescriptors()
 {
 	for (int index = 0; index < maxFramesInFlight; index++)
 		descriptor_set_dirty_flags[index] = 1;
+}
+
+bool Textures::UpdateDescriptorSet(uint binding, const VkImageView& imageView, const VkSampler& sampler)
+{
+	const VkDevice device = _renderer.GetDevice();
+	VO_TRY(device);
+
+	vkQueueWaitIdle(_renderer._graphicsQueue);
+
+	VkDescriptorImageInfo desc_img_info =
+	{
+		.sampler = sampler,
+		.imageView = imageView,
+		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	};
+
+	VkWriteDescriptorSet s =
+	{
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = desc_set_textures_even,
+		.dstBinding = binding,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.pImageInfo = &desc_img_info,
+	};
+
+	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
+
+	s.dstSet = desc_set_textures_odd;
+	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
+
+	vkQueueWaitIdle(_renderer._graphicsQueue);
+
+	return true;
+}
+
+bool Textures::SetLayout(const VkCommandBuffer& cmds, const VkImage& image, VkImageLayout fromLayout, VkImageLayout toLayout)
+{
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = fromLayout; // Or previous layout
+	barrier.newLayout = toLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.srcAccessMask = 0;
+	barrier.dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+
+	vkCmdPipelineBarrier(
+		cmds,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // Or appropriate stage
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	return true;
 }
 
 bool Textures::InitInvalidTexture()
@@ -225,7 +293,7 @@ bool Textures::InitInvalidTexture()
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		QUEUE_IMAGE_BARRIER(cmd_buf, barrier);
 	}
 
@@ -558,32 +626,7 @@ bool Textures::InitHeightmap()
 	}
 
 	VO_TRY(_renderer.SubmitCommandBufferSimple(cmd_buf, _renderer._graphicsQueue));
-
-	VkDescriptorImageInfo desc_img_info =
-	{
-		.sampler = tex_sampler,
-		.imageView = _imv_heightmap,
-		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	};
-
-	VkWriteDescriptorSet s =
-	{
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.dstSet = desc_set_textures_even,
-		.dstBinding = BINDING_OFFSET_HEIGHTMAP,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
-		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.pImageInfo = &desc_img_info,
-	};
-
-	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
-
-	s.dstSet = desc_set_textures_odd;
-	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
-
-	vkQueueWaitIdle(_renderer._graphicsQueue);
-
+	VO_TRY(UpdateDescriptorSet(BINDING_OFFSET_HEIGHTMAP, _imv_heightmap, tex_sampler));
 	return true;
 }
 
@@ -726,32 +769,7 @@ bool Textures::InitTerrainDiffuse()
 	}
 
 	VO_TRY(_renderer.SubmitCommandBufferSimple(cmd_buf, _renderer._graphicsQueue));
-
-	VkDescriptorImageInfo desc_img_info =
-	{
-		.sampler = tex_sampler,
-		.imageView = _imv_terrainDiffuse,
-		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	};
-
-	VkWriteDescriptorSet s =
-	{
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.dstSet = desc_set_textures_even,
-		.dstBinding = BINDING_OFFSET_TERRAIN_DIFFUSE,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
-		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.pImageInfo = &desc_img_info,
-	};
-
-	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
-
-	s.dstSet = desc_set_textures_odd;
-	vkUpdateDescriptorSets(device, 1, &s, 0, nullptr);
-
-	vkQueueWaitIdle(_renderer._graphicsQueue);
-
+	VO_TRY(UpdateDescriptorSet(BINDING_OFFSET_TERRAIN_DIFFUSE, _imv_terrainDiffuse, tex_sampler));
 	return true;
 }
 

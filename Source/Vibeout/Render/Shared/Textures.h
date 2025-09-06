@@ -42,6 +42,8 @@ private:
 	bool InitTerrainDiffuse();
 	bool InitSamplers();
 	void InvalidateTextureDescriptors();
+	bool UpdateDescriptorSet(uint binding, const VkImageView& imageView, const VkSampler& sampler);
+	bool SetLayout(const VkCommandBuffer& cmds, const VkImage& image, VkImageLayout fromLayout, VkImageLayout toLayout);
 
 	struct UnusedResources
 	{
